@@ -288,6 +288,49 @@ describe("PricingCalendar", () => {
     );
   });
 
+  test("keeps the Hot Deal visual state inside a selected range", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [
+            {
+              date: "2026-04-16",
+              status_type: null,
+              net_price: 1200,
+              is_hot_deal: true,
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    const startDay = await screen.findByRole("button", {
+      name: /เลือกวันที่ 15 เมษายน 2569/,
+    });
+    const hotDealDay = screen.getByRole("button", {
+      name: /เลือกวันที่ 16 เมษายน 2569/,
+    });
+    const endDay = screen.getByRole("button", {
+      name: /เลือกวันที่ 17 เมษายน 2569/,
+    });
+    await waitFor(() => {
+      expect(hotDealDay.classList.contains("pricing-day--hot-deal")).toBe(true);
+    });
+
+    await user.click(startDay);
+    await user.click(endDay);
+
+    await waitFor(() => {
+      expect(hotDealDay.classList.contains("pricing-day--in-range")).toBe(true);
+      expect(hotDealDay.classList.contains("pricing-day--hot-deal-in-range")).toBe(true);
+    });
+  });
+
   test("retains the Promotion marker when a Hot Deal overlay is active", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()

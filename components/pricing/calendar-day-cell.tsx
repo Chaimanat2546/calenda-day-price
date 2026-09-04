@@ -28,6 +28,7 @@ export function CalendarDayCell({
   const status = calendarPrice?.status_type;
   const baseModifier = status ? ` pricing-day--${status}` : "";
   const hotDealModifier = calendarPrice?.is_hot_deal ? " pricing-day--hot-deal" : "";
+  const hotDealRangeModifier = calendarPrice?.is_hot_deal && isInRange ? " pricing-day--hot-deal-in-range" : "";
   const hasSpecialPrice = Boolean(status || calendarPrice?.is_hot_deal);
   const selection = isSelected
     ? " pricing-day--selected"
@@ -40,7 +41,7 @@ export function CalendarDayCell({
   return (
     <button
       aria-label={`เลือกวันที่ ${label}${statusLabel}`}
-      className={`pricing-day${baseModifier}${hotDealModifier}${selection}`}
+      className={`pricing-day${baseModifier}${hotDealModifier}${hotDealRangeModifier}${selection}`}
       data-date={date}
       onClick={() => onSelect(date)}
       type="button"
