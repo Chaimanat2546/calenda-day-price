@@ -22,8 +22,11 @@
 - ราคาปกติเป็น constant `BASE_DAILY_PRICE = 1500` (฿1,500) ใน `server/types/pricing.ts` และไม่มีหน้าให้ตั้งค่า
 - ตาราง `daily_price` เป็น sparse model: บันทึกเฉพาะวันที่มีสถานะพิเศษ; วันที่ไม่มี row ใช้ราคาปกติ
 - หนึ่งวันต่อหนึ่งบ้านพักมีได้เพียงหนึ่งสถานะ จาก `unique(property_id, date)` จึงไม่มีสถานะซ้อนกัน
-- สถานะที่รองรับ: `holiday`, `promotion`, `hot_deal`, `holiday_hot_deal`
-- `net_price` เป็นจำนวนเงินบาทเต็มบวก และ `description` เป็นข้อความหมายเหตุของวันนั้น; การตั้งช่วงวันจะคัดลอกข้อมูลเดียวกันไปยังแต่ละวัน
+- `daily_price` รองรับเฉพาะสถานะฐาน `holiday` และ `promotion`; `net_price` เป็นจำนวนเงินบาทเต็มบวก และ `description` เป็นข้อความหมายเหตุของวันนั้น
+- Hot Deal อยู่ในตาราง `hot_deals` แยกจาก Daily Price โดยมีราคา, จำนวนวันแสดงล่วงหน้า (`show_before_days`), หมายเหตุ และ `unique(property_id, date)` จึงมีได้หนึ่งดีลต่อบ้านพักต่อวัน
+- การตั้ง Daily Price เป็นช่วงวันจะคัดลอกสถานะ, ราคา และหมายเหตุเดียวกันไปยังแต่ละวัน
+- การบันทึก Hot Deal แบบช่วงวันจะขยายและบันทึกค่าชุดเดียวกันลงทุกวันในช่วงที่เลือก โดยตรวจวันชนก่อนและต้องยืนยันเมื่อจะเขียนทับ
+- Hot Deal จะ active สำหรับแต่ละวันที่ `Asia/Bangkok` ตั้งแต่วันปัจจุบันถึงวันดีลบวก `show_before_days`; เมื่อ active ราคา Hot Deal มีลำดับความสำคัญเหนือราคา Daily Price แต่ไม่เปลี่ยนสถานะฐาน
 - การลบ override ทำให้วันนั้นกลับไปใช้ราคาปกติ ฿1,500
 
 ## Schema และ seed ของ Supabase
@@ -31,6 +34,7 @@
 - migration ที่เขียนไว้: `supabase/migrations/202609040001_create_pricing_tables.sql`
   - `properties`: บ้านพัก
   - `daily_price`: ราคาพิเศษรายวัน พร้อม foreign key ไป `properties`, check constraint ของสถานะ/ราคา และ unique ต่อบ้านพัก-วัน
+  - `hot_deals`: ดีลรายวันแยกต่างหาก พร้อม foreign key ไป `properties`, check constraint ของราคา/วันแสดงล่วงหน้า และ unique ต่อบ้านพัก-วัน
 - seed ที่เขียนไว้: `supabase/seed.sql` สร้าง “บ้านพักตัวอย่าง” เมื่อยังไม่มีบ้านพัก
 - **สถานะ: migration และ seed ยังไม่ได้ apply กับ Supabase** ตามขอบเขตงานนี้ ต้องให้ผู้ใช้รันผ่าน workflow ของ Supabase ที่ต้องการก่อนใช้งานจริง
 - ห้ามใส่ค่า environment variable หรือ credential ในเอกสารและ commit
@@ -60,17 +64,24 @@ GET    /api/properties/:propertyId/daily-prices?from=&to=
 POST   /api/properties/:propertyId/daily-prices/conflicts
 PUT    /api/properties/:propertyId/daily-prices/range
 DELETE /api/properties/:propertyId/daily-prices?from=&to=
+GET    /api/properties/:propertyId/calendar-prices?from=&to=
+POST   /api/properties/:propertyId/hot-deals/conflicts
+PUT    /api/properties/:propertyId/hot-deals/range
+DELETE /api/properties/:propertyId/hot-deals?from=&to=
 ```
 
 - `POST /conflicts` ตรวจวันที่ชนโดยไม่เปลี่ยนข้อมูล
 - `PUT /range` จะตอบ `CONFLICT` ก่อนเมื่อพบวันเดิม และเขียนทับหลัง client ส่ง `confirmOverwrite: true`
+- `GET /calendar-prices` ส่งข้อมูลปฏิทินที่ resolve แล้ว รวมสถานะ Daily Price, ราคาแสดงผล และ `is_hot_deal` โดยคำนวณวันปัจจุบันครั้งเดียวใน `Asia/Bangkok`
+- Hot Deal APIs มีสัญญาเช่นเดียวกับ Daily Price ตามชนิดงาน: `POST /hot-deals/conflicts` ตรวจวันชน, `PUT /hot-deals/range` บันทึกหรือเขียนทับทั้งช่วงหลังยืนยัน, และ `DELETE /hot-deals` ลบเฉพาะ Hot Deal ในช่วงวันที่ระบุ
 - ทุก endpoint validate `propertyId`, ช่วงวัน, สถานะ และราคา; error code คือ `VALIDATION_ERROR`, `CONFLICT`, `NOT_FOUND`, `INTERNAL_ERROR`
 
 ## UI และการใช้งาน
 
-- หน้าหลักคือ calendar รายเดือน พร้อม Cell Inspector บน desktop และ bottom sheet บน mobile
+- หน้าหลักคือ calendar รายเดือน พร้อม Cell Inspector บน desktop และ bottom sheet บน mobile โดยไม่มีการสร้างหน้าใหม่
+- Cell Inspector มีตัวเลือกโหมด `ราคาพิเศษ` และ `🔥 Hot Deal`: โหมดราคาพิเศษตั้งได้เฉพาะ Holiday หรือ Promotion ส่วนโหมด Hot Deal ตั้งราคา, จำนวนวันแสดงล่วงหน้า และหมายเหตุแยกกัน
 - เลือกวันหนึ่งครั้งเพื่อเริ่มช่วง แล้วเลือกวันถัดไปเพื่อขยายช่วง
-- ปฏิทินใช้สีและ icon ตามสถานะ: วันหยุดพื้นเหลือง, โปรไฟลุกใช้ไฟ, โปรไฟลุกในวันหยุดมีทั้งพื้นเหลืองและไฟ, โปรโมชั่นใช้สัญลักษณ์แท็ก
+- ปฏิทินประกอบ visual ของสถานะฐานกับ Hot Deal: Holiday คงพื้นเหลือง, Promotion คงสัญลักษณ์ `✦`, และ Hot Deal ที่ active เพิ่ม `🔥` พร้อมราคา Hot Deal โดยไม่แทนที่สถานะฐาน
 - UI ต้องยึด layout และ design system จาก Stitch project `Calendar Pricing Day Cell` เป็น reference ไม่ออกแบบ visual system ใหม่เอง
 - การบันทึกซ้ำถูกป้องกันด้วย loading state; การลบถามยืนยันก่อนเสมอ
 
