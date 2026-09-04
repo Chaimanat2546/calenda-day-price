@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { rangeDates, resolveDailyPrice } from "@/lib/dates";
-import { rangeInputSchema } from "@/lib/validation/daily-price";
+import * as dailyPriceValidation from "@/lib/validation/daily-price";
 import {
   applyDailyPriceRange,
   checkDailyPriceConflicts,
@@ -26,8 +26,51 @@ function createDailyPrice(id: string, date: string): DailyPrice {
 }
 
 describe("daily-price validation and dates", () => {
+  const hotDealRangeSchema = Reflect.get(
+    dailyPriceValidation,
+    "hotDealRangeSchema"
+  ) as
+    | {
+        safeParse: (input: unknown) => { success: boolean };
+      }
+    | undefined;
+
+  test("accepts a valid seven-day hot deal range", () => {
+    expect(
+      hotDealRangeSchema?.safeParse({
+        startDate: "2026-12-20",
+        endDate: "2026-12-26",
+        netPrice: 1990,
+        showBeforeDays: 7,
+        description: "ปลายปี",
+      }).success
+    ).toBe(true);
+  });
+
+  test("rejects a hot deal lead time greater than 365 days", () => {
+    expect(
+      hotDealRangeSchema?.safeParse({
+        startDate: "2026-12-20",
+        endDate: "2026-12-26",
+        netPrice: 1990,
+        showBeforeDays: 366,
+      }).success
+    ).toBe(false);
+  });
+
+  test("rejects removed hot_deal as a daily price status", () => {
+    const result = dailyPriceValidation.rangeInputSchema.safeParse({
+      startDate: "2026-12-20",
+      endDate: "2026-12-20",
+      statusType: "hot_deal",
+      netPrice: 1990,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   test("rejects a non-positive daily price", () => {
-    const result = rangeInputSchema.safeParse({
+    const result = dailyPriceValidation.rangeInputSchema.safeParse({
       startDate: "2026-04-15",
       endDate: "2026-04-17",
       statusType: "promotion",
@@ -38,7 +81,7 @@ describe("daily-price validation and dates", () => {
   });
 
   test("rejects a reversed date range", () => {
-    const result = rangeInputSchema.safeParse({
+    const result = dailyPriceValidation.rangeInputSchema.safeParse({
       startDate: "2026-04-17",
       endDate: "2026-04-15",
       statusType: "promotion",
@@ -98,16 +141,16 @@ describe("pricing service", () => {
       propertyId,
       startDate: "2026-04-15",
       endDate: "2026-04-17",
-      statusType: "hot_deal",
+      statusType: "promotion",
       netPrice: 2400,
       description: "สงกรานต์",
       confirmed: true,
     });
 
     expect(client.writes).toEqual([
-      { property_id: propertyId, date: "2026-04-15", status_type: "hot_deal", net_price: 2400, description: "สงกรานต์" },
-      { property_id: propertyId, date: "2026-04-16", status_type: "hot_deal", net_price: 2400, description: "สงกรานต์" },
-      { property_id: propertyId, date: "2026-04-17", status_type: "hot_deal", net_price: 2400, description: "สงกรานต์" },
+      { property_id: propertyId, date: "2026-04-15", status_type: "promotion", net_price: 2400, description: "สงกรานต์" },
+      { property_id: propertyId, date: "2026-04-16", status_type: "promotion", net_price: 2400, description: "สงกรานต์" },
+      { property_id: propertyId, date: "2026-04-17", status_type: "promotion", net_price: 2400, description: "สงกรานต์" },
     ]);
     expect(result).toMatchObject({ status: "OK" });
   });
