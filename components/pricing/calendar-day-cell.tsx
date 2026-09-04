@@ -1,3 +1,5 @@
+import { Tag } from "lucide-react";
+
 import type { CalendarDayPrice, StatusType } from "@/server/types/pricing";
 import { BASE_DAILY_PRICE } from "@/server/types/pricing";
 
@@ -56,7 +58,7 @@ export function CalendarDayCell({
     >
       <span className="pricing-day__number">{day}</span>
       {visibleStatus === "promotion" ? (
-        <span aria-label="โปรโมชั่น" className="pricing-day__mark pricing-day__mark--tag" role="img">✦</span>
+        <Tag aria-label="โปรโมชั่น" className="pricing-day__mark pricing-day__mark--tag" role="img" size={14} />
       ) : null}
       {isHotDeal ? (
         <span aria-label="โปรไฟลุก" className="pricing-day__mark" role="img">🔥</span>

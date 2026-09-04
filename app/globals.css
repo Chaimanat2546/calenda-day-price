@@ -204,32 +204,51 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .pricing-day--selected .pricing-day__price, .pricing-day--selected .pricing-day__base-price, .pricing-day--selected .pricing-day__mark { color: #fff !important; }
 
 .pricing-editor { align-self: start; overflow: hidden; padding: 20px; }
-.pricing-editor__heading { align-items: flex-start; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; padding-bottom: 16px; }
+.pricing-editor__heading { align-items: flex-start; border-bottom: 1px solid #e7eafb; display: flex; gap: 12px; justify-content: space-between; padding-bottom: 17px; position: relative; }
+.pricing-editor__identity { align-items: center; display: flex; gap: 9px; min-width: 0; }
+.pricing-editor__identity-icon { align-items: center; background: #eeecff; border-radius: 5px; color: #4831dd; display: inline-flex; height: 27px; justify-content: center; width: 27px; }
+.pricing-editor__identity .eyebrow { color: #20284c; font-family: Georgia, serif; font-size: .57rem; letter-spacing: .02em; margin-bottom: 3px; }
+.pricing-editor__identity h2 { font-size: .98rem; line-height: 1.05; }
+.pricing-editor__active-badge { background: #e3ebe9; border-radius: 2px; color: #006a61; font-size: .52rem; font-weight: 900; letter-spacing: .08em; line-height: 1.2; padding: 7px 8px; text-align: left; }
 .pricing-editor__range { color: #717a94; font-size: .78rem; margin: 7px 0 0; overflow-wrap: anywhere; }
 .pricing-editor__heading .pricing-editor__range { flex-basis: 100%; }
-.pricing-editor__status-pill { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 999px; color: #047857; font-size: .67rem; font-weight: 800; margin-top: 10px; padding: 4px 8px; }
+.pricing-editor__status-pill { align-items: center; background: #fff3f5; border: 1px solid #ff98aa; border-radius: 3px; color: #e9395c; display: inline-flex; font-size: .62rem; font-weight: 800; gap: 3px; margin: 0; padding: 3px 7px; }
 .drawer-close { align-items: center; background: #f1f2f7; border: 0; border-radius: 50%; color: #4f5870; display: inline-flex; font-size: 1.35rem; height: 32px; justify-content: center; line-height: 1; margin-top: -2px; padding-bottom: 3px; width: 32px; }
-.pricing-editor__base-price { align-items: center; background: #f6f6fa; border-radius: 10px; color: #777f95; display: flex; font-size: .77rem; justify-content: space-between; margin: 17px 0; padding: 11px 12px; }
-.pricing-editor__base-price strong { color: var(--ink); font-size: .9rem; }
-.pricing-editor__mode-switcher { background: #f1f2f7; border-radius: 10px; display: grid; gap: 3px; grid-template-columns: 1fr 1fr; margin-top: 17px; padding: 3px; }
-.pricing-editor__mode-switcher button { background: transparent; border: 0; border-radius: 8px; color: #6d748b; font-size: .76rem; font-weight: 750; min-height: 38px; padding: 0 8px; }
-.pricing-editor__mode-switcher button[aria-pressed="true"] { background: #fff; box-shadow: 0 2px 7px rgb(32 38 61 / 9%); color: var(--ink); }
-.pricing-editor__fields { display: grid; gap: 14px; }
+.pricing-editor__base-price { align-items: center; background: transparent; color: #442edb; display: flex; font-size: .68rem; font-weight: 850; justify-content: space-between; margin: 0; padding: 0; }
+.pricing-editor__base-price span { align-items: center; display: inline-flex; gap: 4px; }
+.pricing-editor__base-price strong { color: #5f6780; font-size: .64rem; text-decoration: line-through; }
+.pricing-editor__mode-switcher { background: #edf1fe; border-radius: 6px; display: grid; gap: 3px; grid-template-columns: 1fr 1fr; margin-top: 19px; padding: 3px; }
+.pricing-editor__mode-switcher button { align-items: center; background: transparent; border: 0; border-radius: 4px; color: #e85637; display: inline-flex; font-size: .74rem; font-weight: 850; gap: 5px; justify-content: center; min-height: 30px; padding: 0 8px; }
+.pricing-editor__mode-switcher button[aria-pressed="true"] { background: #4228dc; box-shadow: 0 2px 5px rgb(66 40 220 / .3); color: #fff; }
+.pricing-editor__selection-card { background: #edf2ff; border: 1px solid #c2cef8; border-radius: 6px; display: grid; gap: 7px; margin-top: 16px; padding: 12px; }
+.pricing-editor__selection-card-header { align-items: center; color: #1f2c53; display: flex; font-size: .63rem; font-weight: 800; justify-content: space-between; }
+.pricing-editor__selection-card strong { color: #1d315d; font-family: Georgia, serif; font-size: .98rem; line-height: 1.15; }
+.pricing-editor__selection-card p { color: #26365a; font-size: .63rem; margin: 0; }
+.pricing-editor__fields { display: grid; gap: 15px; margin-top: 17px; }
 .pricing-editor__fields > label, .pricing-field > label { color: #555e78; display: grid; font-size: .76rem; font-weight: 750; gap: 6px; }
 .pricing-field { display: grid; gap: 6px; }
-.pricing-editor select, .pricing-editor input, .pricing-editor textarea { background: #fff; border: 1px solid #dfe2eb; border-radius: 9px; color: var(--ink); font-size: .86rem; font-weight: 550; outline: 0; padding: 10px; transition: border-color .16s, box-shadow .16s; width: 100%; }
+.pricing-field__label-row { align-items: center; color: #2a2359; display: flex; font-size: .68rem; font-weight: 850; justify-content: space-between; }
+.pricing-field__label-row span:last-child { font-size: .62rem; }
+.pricing-editor select, .pricing-editor input, .pricing-editor textarea { background: #fff; border: 1px solid #d3d9fa; border-radius: 6px; color: #261aa0; font-size: .86rem; font-weight: 700; outline: 0; padding: 9px 10px; transition: border-color .16s, box-shadow .16s; width: 100%; }
 .pricing-editor select:focus, .pricing-editor input:focus, .pricing-editor textarea:focus { border-color: #9389f1; box-shadow: 0 0 0 3px rgb(102 88 232 / .1); }
-.pricing-editor textarea { min-height: 94px; resize: vertical; }
-.price-input { position: relative; }
-.price-input > span { color: #9299ad; left: 11px; pointer-events: none; position: absolute; top: 10px; }
-.price-input input { padding-left: 28px; }
+.pricing-editor textarea { background: #eef2ff; border: 0; border-radius: 6px; color: #24315a; font-size: .7rem; font-weight: 600; min-height: 54px; resize: vertical; }
+.pricing-editor__description { color: #29215a; display: grid; font-size: .68rem; font-weight: 850; gap: 7px; }
+.price-input { display: grid; grid-template-columns: 54px 1fr; position: relative; }
+.price-input > span { align-items: center; background: #e5e5ff; border: 1px solid #b6bbf5; border-right: 0; border-radius: 6px 0 0 6px; color: #2f20bc; display: flex; font-family: Georgia, serif; font-size: .78rem; font-weight: 800; justify-content: center; pointer-events: none; }
+.price-input input { border-radius: 0 6px 6px 0; font-family: Georgia, serif; padding-left: 11px; }
 .price-stepper { display: flex; gap: 7px; }
-.price-stepper button { background: #f8fafc; border: 1px solid #dbe1ea; border-radius: 8px; color: #475569; flex: 1; font-size: .73rem; font-weight: 800; min-height: 34px; }
-.price-stepper button:hover:not(:disabled) { background: #eef2ff; border-color: #a5b4fc; color: #4338ca; }
+.price-stepper button { background: #eff3ff; border: 0; border-radius: 5px; color: #151e54; flex: 1; font-size: .67rem; font-weight: 850; min-height: 28px; }
+.price-stepper button:hover:not(:disabled) { background: #dddfff; color: #4338ca; }
+.pricing-status-picker { display: grid; gap: 8px; }
+.pricing-status-picker__choices { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+.pricing-status-picker__choices button { align-items: center; background: #fff; border: 2px solid #eef2ff; border-radius: 5px; color: #2a2c60; display: inline-flex; font-size: .68rem; font-weight: 800; gap: 6px; justify-content: center; min-height: 34px; }
+.pricing-status-picker__choices button:first-child { color: #996700; }
+.pricing-status-picker__choices button[aria-pressed="true"] { background: #fff5f7; border-color: #ff8fa7; color: #e3375b; }
 .pricing-editor__actions { display: grid; gap: 8px; margin-top: 19px; }
-.button, .overwrite-notice button { border: 0; border-radius: 9px; font-size: .8rem; font-weight: 780; min-height: 41px; padding: 0 13px; transition: transform .14s, opacity .14s; }
+.button, .overwrite-notice button { align-items: center; border: 0; border-radius: 6px; display: inline-flex; font-size: .74rem; font-weight: 850; gap: 7px; justify-content: center; min-height: 34px; padding: 0 13px; transition: transform .14s, opacity .14s; }
 .button:not(:disabled):active, .overwrite-notice button:not(:disabled):active { transform: translateY(1px); }
-.button--primary, .overwrite-notice button { background: var(--violet); color: #fff; }
+.button--primary, .overwrite-notice button { background: #4328dc; box-shadow: 0 3px 7px rgb(67 40 220 / .25); color: #fff; }
+.button--secondary { background: #edf2ff; color: #273765; }
 .button--danger { background: #fff1f2; color: #d75263; }
 .overwrite-notice { background: #fff6d9; border: 1px solid #f4d77c; border-radius: 10px; color: #6a541f; display: grid; font-size: .76rem; gap: 6px; line-height: 1.45; margin-top: 16px; padding: 12px; }
 .overwrite-notice strong { font-size: .8rem; }
@@ -267,7 +286,7 @@ button:disabled { cursor: not-allowed; opacity: .52; }
   .mobile-drawer .pricing-editor { border: 0; border-radius: 20px 20px 0 0; box-shadow: 0 -12px 35px rgb(15 23 42 / .16); max-height: min(86dvh, 710px); padding: 13px 16px max(18px, env(safe-area-inset-bottom)); }
   .mobile-drawer__handle { background: #cbd5e1; border-radius: 999px; height: 4px; margin: 0 auto 13px; width: 38px; }
   .mobile-drawer .pricing-editor__heading { padding-bottom: 10px; }
-  .mobile-drawer .pricing-editor__heading .eyebrow { display: none; }
+  .mobile-drawer .pricing-editor__heading .eyebrow { display: block; }
   .mobile-drawer .pricing-editor__heading h2 { font-size: 1.12rem; }
   .mobile-drawer .pricing-editor__range { font-size: .7rem; margin-top: 5px; }
   .pricing-editor__mobile-context { color: #64748b; font-size: .72rem; margin: 10px 0 0; overflow-wrap: anywhere; }
@@ -313,7 +332,7 @@ button:disabled { cursor: not-allowed; opacity: .52; }
   .month-controls button:hover { border-color: #4f46e5; color: #4f46e5; }
   .pricing-editor { border-color: #e2e8f0; box-shadow: 0 16px 34px rgb(15 23 42 / .06); position: sticky; top: 20px; }
   .pricing-editor__mode-switcher { background: #f1f5f9; }
-  .pricing-editor__mode-switcher button[aria-pressed="true"] { color: #4f46e5; }
+  .pricing-editor__mode-switcher button[aria-pressed="true"] { color: #fff; }
   .pricing-editor__base-price { background: #f8fafc; }
   .pricing-editor__status-pill { background: #ecfdf5; border-color: #a7f3d0; color: #059669; }
   .price-stepper button { min-height: 38px; }

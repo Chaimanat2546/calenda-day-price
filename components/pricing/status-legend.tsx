@@ -1,7 +1,9 @@
+import { Sparkles } from "lucide-react";
+
 const statuses = [
   { type: "normal", label: "วันปกติ", mark: "" },
   { type: "holiday", label: "วันหยุด", mark: "" },
-  { type: "promotion", label: "ราคาพิเศษ", mark: "✦" },
+  { type: "promotion", label: "ราคาพิเศษ", mark: <Sparkles aria-hidden="true" size={10} /> },
   { type: "hot-deal", label: "โปรไฟลุก", mark: "🔥" },
 ] as const;
 
