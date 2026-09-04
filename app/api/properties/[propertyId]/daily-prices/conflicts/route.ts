@@ -41,7 +41,7 @@ export async function POST(
       client as unknown as DailyPriceRepositoryClient,
       { propertyId: propertyId.data, ...range.data }
     );
-    return Response.json({ data: { conflicts: dates } });
+    return Response.json({ data: { dates } });
   } catch {
     return apiError("INTERNAL_ERROR", 500);
   }

@@ -48,7 +48,7 @@ export async function PUT(
     );
 
     if (result.status === "CONFLICT") {
-      return apiError("CONFLICT", 409, { conflicts: result.dates });
+      return apiError("CONFLICT", 409, { dates: result.dates });
     }
 
     return Response.json({ data: result.data });

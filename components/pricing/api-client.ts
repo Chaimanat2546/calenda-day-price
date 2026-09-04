@@ -3,8 +3,11 @@ import type { DailyPrice, Property, StatusType } from "@/server/types/pricing";
 type ApiEnvelope<T> = { data: T };
 
 type ErrorPayload = {
-  error: { code: string; message: string };
-  conflicts?: string[];
+  error: {
+    code: string;
+    message: string;
+    details?: { dates?: string[] };
+  };
 };
 
 export class PricingApiError extends Error {
@@ -34,7 +37,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     const error = payload as ErrorPayload | null;
     throw new PricingApiError(
       error?.error?.message ?? "ไม่สามารถเชื่อมต่อข้อมูลราคาได้",
-      error?.conflicts ?? []
+      error?.error?.details?.dates ?? []
     );
   }
 
@@ -59,7 +62,7 @@ export async function getDailyPrices(
 
 export async function checkConflicts(propertyId: string, range: RangeInput): Promise<string[]> {
   return (
-    await request<ApiEnvelope<{ conflicts: string[] }>>(
+    await request<ApiEnvelope<{ dates: string[] }>>(
       `/api/properties/${propertyId}/daily-prices/conflicts`,
       {
         method: "POST",
@@ -67,7 +70,7 @@ export async function checkConflicts(propertyId: string, range: RangeInput): Pro
         body: JSON.stringify(range),
       }
     )
-  ).data.conflicts;
+  ).data.dates;
 }
 
 export async function updateDailyPriceRange(

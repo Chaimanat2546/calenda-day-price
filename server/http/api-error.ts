@@ -5,7 +5,7 @@ export type ApiErrorCode =
   | "INTERNAL_ERROR";
 
 type ApiErrorOptions = {
-  conflicts?: string[];
+  dates?: string[];
 };
 
 const defaultMessages: Record<ApiErrorCode, string> = {
@@ -25,8 +25,8 @@ export function apiError(
       error: {
         code,
         message: defaultMessages[code],
+        ...(options.dates ? { details: { dates: options.dates } } : {}),
       },
-      ...(options.conflicts ? { conflicts: options.conflicts } : {}),
     },
     { status }
   );

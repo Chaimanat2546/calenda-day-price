@@ -117,7 +117,7 @@ describe("pricing REST API", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      data: { conflicts: ["2026-04-16"] },
+      data: { dates: ["2026-04-16"] },
     });
   });
 
@@ -141,9 +141,12 @@ describe("pricing REST API", () => {
     );
 
     expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toMatchObject({
-      error: { code: "CONFLICT" },
-      conflicts: ["2026-04-16"],
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "CONFLICT",
+        message: "มีข้อมูลราคาพิเศษในช่วงวันที่เลือกอยู่แล้ว",
+        details: { dates: ["2026-04-16"] },
+      },
     });
     expect(applyDailyPriceRange).toHaveBeenCalledWith(
       expect.anything(),

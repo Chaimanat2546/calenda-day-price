@@ -116,7 +116,7 @@ describe("PricingCalendar", () => {
       .mockResolvedValueOnce(jsonResponse({ data: [property] }))
       .mockResolvedValueOnce(jsonResponse({ data: [] }))
       .mockResolvedValueOnce(
-        jsonResponse({ data: { conflicts: ["2026-04-16"] } })
+        jsonResponse({ data: { dates: ["2026-04-16"] } })
       );
     vi.stubGlobal("fetch", fetchMock);
 
