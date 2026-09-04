@@ -7,8 +7,15 @@ import {
   checkDailyPriceConflicts,
   deleteDailyPriceRange,
 } from "@/server/services/pricing-service";
+import {
+  applyHotDealRange,
+  checkHotDealConflicts,
+  deleteHotDealRange,
+} from "@/server/services/hot-deal-service";
+import { buildCalendarDayPrices } from "@/server/services/calendar-pricing-service";
 import type { DailyPriceRepositoryClient } from "@/server/repositories/daily-price-repository";
-import type { DailyPrice } from "@/server/types/pricing";
+import type { HotDealRepositoryClient } from "@/server/repositories/hot-deal-repository";
+import type { DailyPrice, HotDeal } from "@/server/types/pricing";
 
 const propertyId = "5f0cbf1d-5f78-4dca-a14c-d1fa66379070";
 
@@ -19,6 +26,19 @@ function createDailyPrice(id: string, date: string): DailyPrice {
     date,
     status_type: "promotion",
     net_price: 2000,
+    description: null,
+    created_at: "2026-04-01T00:00:00.000Z",
+    updated_at: "2026-04-01T00:00:00.000Z",
+  };
+}
+
+function createHotDeal(id: string, date: string, showBeforeDays = 7): HotDeal {
+  return {
+    id,
+    property_id: propertyId,
+    date,
+    net_price: 1990,
+    show_before_days: showBeforeDays,
     description: null,
     created_at: "2026-04-01T00:00:00.000Z",
     updated_at: "2026-04-01T00:00:00.000Z",
@@ -170,6 +190,119 @@ describe("pricing service", () => {
   });
 });
 
+describe("hot deal pricing", () => {
+  test("returns a conflict without writing an unconfirmed overlapping hot deal", async () => {
+    const client = createHotDealClient([createHotDeal("existing", "2026-12-21")]);
+
+    const result = await applyHotDealRange(client, {
+      propertyId,
+      startDate: "2026-12-20",
+      endDate: "2026-12-22",
+      netPrice: 1990,
+      showBeforeDays: 7,
+      description: null,
+      confirmed: false,
+    });
+
+    expect(result).toEqual({ status: "CONFLICT", dates: ["2026-12-21"] });
+    expect(client.writes).toEqual([]);
+  });
+
+  test("reports conflicts for the selected hot deal range", async () => {
+    const client = createHotDealClient([createHotDeal("existing", "2026-12-21")]);
+
+    await expect(
+      checkHotDealConflicts(client, {
+        propertyId,
+        startDate: "2026-12-20",
+        endDate: "2026-12-22",
+      })
+    ).resolves.toEqual({ dates: ["2026-12-21"] });
+  });
+
+  test("writes a complete hot deal row for every confirmed date", async () => {
+    const client = createHotDealClient();
+
+    const result = await applyHotDealRange(client, {
+      propertyId,
+      startDate: "2026-12-20",
+      endDate: "2026-12-22",
+      netPrice: 1990,
+      showBeforeDays: 7,
+      description: "ปลายปี",
+      confirmed: true,
+    });
+
+    expect(client.writes).toEqual([
+      { property_id: propertyId, date: "2026-12-20", net_price: 1990, show_before_days: 7, description: "ปลายปี" },
+      { property_id: propertyId, date: "2026-12-21", net_price: 1990, show_before_days: 7, description: "ปลายปี" },
+      { property_id: propertyId, date: "2026-12-22", net_price: 1990, show_before_days: 7, description: "ปลายปี" },
+    ]);
+    expect(result).toMatchObject({ status: "OK" });
+  });
+
+  test("returns every hot deal row deleted from an inclusive date range", async () => {
+    const first = createHotDeal("first", "2026-12-20");
+    const last = createHotDeal("last", "2026-12-22");
+    const client = createHotDealClient([first, last]);
+
+    await expect(
+      deleteHotDealRange(client, {
+        propertyId,
+        startDate: "2026-12-20",
+        endDate: "2026-12-22",
+      })
+    ).resolves.toEqual([first, last]);
+  });
+
+  test("activates each date independently from its lead time", () => {
+    expect(
+      buildCalendarDayPrices({
+        startDate: "2026-12-20",
+        endDate: "2026-12-21",
+        today: "2026-12-13",
+        dailyPrices: [],
+        hotDeals: [
+          createHotDeal("first", "2026-12-20", 7),
+          createHotDeal("second", "2026-12-21", 7),
+        ],
+      }).map((day) => day.is_hot_deal)
+    ).toEqual([true, false]);
+  });
+
+  test("uses active hot deal price while keeping the holiday status", () => {
+    expect(
+      buildCalendarDayPrices({
+        startDate: "2026-12-20",
+        endDate: "2026-12-20",
+        today: "2026-12-13",
+        dailyPrices: [{ ...createDailyPrice("holiday", "2026-12-20"), status_type: "holiday" }],
+        hotDeals: [createHotDeal("deal", "2026-12-20", 7)],
+      })[0]
+    ).toMatchObject({
+      status_type: "holiday",
+      net_price: 1990,
+      is_hot_deal: true,
+    });
+  });
+
+  test("leaves the ordinary price when a hot deal is inactive", () => {
+    expect(
+      buildCalendarDayPrices({
+        startDate: "2026-12-21",
+        endDate: "2026-12-21",
+        today: "2026-12-13",
+        dailyPrices: [createDailyPrice("promotion", "2026-12-21")],
+        hotDeals: [createHotDeal("deal", "2026-12-21", 7)],
+      })[0]
+    ).toMatchObject({
+      status_type: "promotion",
+      net_price: 2000,
+      is_hot_deal: false,
+    });
+  });
+});
+
 type PriceRow = Pick<
   DailyPrice,
   "property_id" | "date" | "status_type" | "net_price" | "description"
@@ -213,4 +346,46 @@ function createClient(existing: DailyPrice[] = []) {
       delete: () => deleteQuery,
     }),
   } as unknown as DailyPriceRepositoryClient & { writes: PriceRow[] };
+}
+
+type HotDealRow = Pick<
+  HotDeal,
+  "property_id" | "date" | "net_price" | "show_before_days" | "description"
+>;
+
+function createHotDealClient(existing: HotDeal[] = []) {
+  const writes: HotDealRow[] = [];
+  const selectedDates = existing.map(({ date }) => ({ date }));
+
+  const query = {
+    eq: () => query,
+    gte: () => query,
+    lte: () => query,
+    order: () => query,
+    then: (onfulfilled: (result: { data: { date: string }[]; error: null }) => unknown) =>
+      Promise.resolve({ data: selectedDates, error: null }).then(onfulfilled),
+  };
+
+  const deleteQuery = {
+    eq: () => deleteQuery,
+    gte: () => deleteQuery,
+    lte: () => deleteQuery,
+    select: () => Promise.resolve({ data: existing, error: null }),
+    then: (onfulfilled: (result: { data: null; error: null }) => unknown) =>
+      Promise.resolve({ data: null, error: null }).then(onfulfilled),
+  };
+
+  return {
+    writes,
+    from: () => ({
+      select: () => query,
+      upsert: (rows: HotDealRow[]) => {
+        writes.push(...rows);
+        return {
+          select: () => Promise.resolve({ data: rows, error: null }),
+        };
+      },
+      delete: () => deleteQuery,
+    }),
+  } as unknown as HotDealRepositoryClient & { writes: HotDealRow[] };
 }

@@ -2,6 +2,12 @@ import { BASE_DAILY_PRICE, type DailyPrice } from "@/server/types/pricing";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+export function addDays(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
 export function rangeDates(startDate: string, endDate: string): string[] {
   const dates: string[] = [];
   const start = new Date(`${startDate}T00:00:00.000Z`);
