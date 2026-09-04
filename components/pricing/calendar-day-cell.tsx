@@ -31,16 +31,18 @@ export function CalendarDayCell({
   onSelect,
 }: CalendarDayCellProps) {
   const status = calendarPrice?.status_type;
-  const baseModifier = status ? ` pricing-day--${status}` : "";
-  const hotDealModifier = calendarPrice?.is_hot_deal ? " pricing-day--hot-deal" : "";
-  const hotDealRangeModifier = calendarPrice?.is_hot_deal && isInRange ? " pricing-day--hot-deal-in-range" : "";
+  const isHotDeal = calendarPrice?.is_hot_deal === true;
+  const visibleStatus = status === "promotion" && isHotDeal ? null : status;
+  const baseModifier = visibleStatus ? ` pricing-day--${visibleStatus}` : "";
+  const hotDealModifier = isHotDeal ? " pricing-day--hot-deal" : "";
+  const hotDealRangeModifier = isHotDeal && isInRange ? " pricing-day--hot-deal-in-range" : "";
   const hasSpecialPrice = Boolean(status || calendarPrice?.is_hot_deal);
   const selection = isSelected
     ? " pricing-day--selected"
     : isInRange
       ? " pricing-day--in-range"
       : "";
-  const statusLabel = `${status ? `, ${statusLabels[status]}` : ""}${calendarPrice?.is_hot_deal ? ", โปรไฟลุก" : ""}`;
+  const statusLabel = `${visibleStatus ? `, ${statusLabels[visibleStatus]}` : ""}${isHotDeal ? ", โปรไฟลุก" : ""}`;
   const activePrice = hasSpecialPrice ? calendarPrice?.net_price ?? BASE_DAILY_PRICE : BASE_DAILY_PRICE;
 
   return (
@@ -52,10 +54,10 @@ export function CalendarDayCell({
       type="button"
     >
       <span className="pricing-day__number">{day}</span>
-      {status === "promotion" ? (
+      {visibleStatus === "promotion" ? (
         <span aria-label="โปรโมชั่น" className="pricing-day__mark pricing-day__mark--tag" role="img">✦</span>
       ) : null}
-      {calendarPrice?.is_hot_deal ? (
+      {isHotDeal ? (
         <span aria-label="โปรไฟลุก" className="pricing-day__mark" role="img">🔥</span>
       ) : null}
       <span aria-hidden="true" className="pricing-day__price pricing-day__price--mobile">{formatCompactPrice(activePrice)}</span>

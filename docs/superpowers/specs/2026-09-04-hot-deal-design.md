@@ -54,7 +54,7 @@ create table public.hot_deals (
 
 - ราคาในปฏิทินเป็น `hot_deals.net_price`
 - แสดงเครื่องหมาย `🔥`
-- คงภาพของสถานะเดิม: Holiday ยังคงพื้นเหลือง; Promotion ยังคงเครื่องหมาย `✦`
+- Holiday ยังคงพื้นเหลืองร่วมกับ `🔥`; แต่ Promotion ถูก Hot Deal ทับใน cell จึงซ่อนพื้นและเครื่องหมาย `✦`
 - ถ้าไม่มี Holiday หรือ Promotion ให้แสดงรูปแบบ Hot Deal เดี่ยว
 
 `show_before_days` ยังคงบันทึกไว้ในข้อมูล เพื่อใช้กำหนดช่วงเผยแพร่เมื่อมี public booking flow ในอนาคต; flow นั้นยังไม่อยู่ในขอบเขตของระบบปัจจุบัน.

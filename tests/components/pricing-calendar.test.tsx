@@ -479,7 +479,7 @@ describe("PricingCalendar", () => {
     });
   });
 
-  test("retains the Promotion marker when a Hot Deal overlay is active", async () => {
+  test("lets Hot Deal replace Promotion in the management calendar cell", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse({ data: [property] }))
@@ -503,11 +503,12 @@ describe("PricingCalendar", () => {
       name: /เลือกวันที่ 15 เมษายน 2569/,
     });
     await waitFor(() => {
-      expect(day.classList.contains("pricing-day--promotion")).toBe(true);
+      expect(day.classList.contains("pricing-day--promotion")).toBe(false);
       expect(day.classList.contains("pricing-day--hot-deal")).toBe(true);
     });
-    expect(within(day).getByRole("img", { name: "โปรโมชั่น" })).toBeTruthy();
+    expect(within(day).queryByRole("img", { name: "โปรโมชั่น" })).toBeNull();
     expect(within(day).getByRole("img", { name: "โปรไฟลุก" })).toBeTruthy();
+    expect(day.getAttribute("aria-label")).not.toContain("โปรโมชั่น");
   });
 
   test("disables saving while a range update is pending to prevent duplicate submissions", async () => {
