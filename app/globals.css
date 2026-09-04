@@ -214,7 +214,8 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .pricing-editor__mode-switcher button { background: transparent; border: 0; border-radius: 8px; color: #6d748b; font-size: .76rem; font-weight: 750; min-height: 38px; padding: 0 8px; }
 .pricing-editor__mode-switcher button[aria-pressed="true"] { background: #fff; box-shadow: 0 2px 7px rgb(32 38 61 / 9%); color: var(--ink); }
 .pricing-editor__fields { display: grid; gap: 14px; }
-.pricing-editor__fields label { color: #555e78; display: grid; font-size: .76rem; font-weight: 750; gap: 6px; }
+.pricing-editor__fields > label, .pricing-field > label { color: #555e78; display: grid; font-size: .76rem; font-weight: 750; gap: 6px; }
+.pricing-field { display: grid; gap: 6px; }
 .pricing-editor select, .pricing-editor input, .pricing-editor textarea { background: #fff; border: 1px solid #dfe2eb; border-radius: 9px; color: var(--ink); font-size: .86rem; font-weight: 550; outline: 0; padding: 10px; transition: border-color .16s, box-shadow .16s; width: 100%; }
 .pricing-editor select:focus, .pricing-editor input:focus, .pricing-editor textarea:focus { border-color: #9389f1; box-shadow: 0 0 0 3px rgb(102 88 232 / .1); }
 .pricing-editor textarea { min-height: 94px; resize: vertical; }
@@ -234,6 +235,7 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .overwrite-notice__dates { display: grid; gap: 2px; margin: 0; padding-left: 18px; }
 .overwrite-notice button { margin-top: 4px; }
 .pricing-editor__message { color: #5c647b; font-size: .75rem; line-height: 1.45; margin: 14px 0 0; }
+.pricing-editor__return-to-calendar { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; color: #4338ca; font-size: .76rem; font-weight: 800; margin-top: 14px; min-height: 38px; padding: 0 11px; width: 100%; }
 .mobile-drawer { inset: 0; position: fixed; z-index: 30; }
 .mobile-drawer__backdrop { background: rgb(26 31 48 / .42); border: 0; inset: 0; position: absolute; width: 100%; }
 .mobile-drawer .pricing-editor { border-bottom-left-radius: 0; border-bottom-right-radius: 0; bottom: 0; margin: 0; max-height: min(82vh, 690px); overflow-y: auto; position: absolute; width: 100%; }

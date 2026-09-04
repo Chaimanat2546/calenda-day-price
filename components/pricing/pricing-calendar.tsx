@@ -121,6 +121,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   const drawerOpenerRef = useRef<HTMLElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const desktopInspectorRef = useRef<HTMLElement | null>(null);
+  const calendarGridRef = useRef<HTMLDivElement | null>(null);
   const visibleRange = useMemo(() => monthRange(month), [month]);
   const visibleDays = useMemo(() => datesForMonth(month), [month]);
   const calendarPriceByDate = useMemo(
@@ -159,6 +160,13 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   const closeMobileEditor = useCallback(() => {
     setIsMobileEditorOpen(false);
     drawerOpenerRef.current?.focus();
+  }, []);
+
+  const returnToCalendar = useCallback(() => {
+    setIsMobileEditorOpen(false);
+    requestAnimationFrame(() => {
+      calendarGridRef.current?.querySelector<HTMLButtonElement>(".pricing-day")?.focus();
+    });
   }, []);
 
   const openMobileEditor = useCallback((opener?: HTMLElement | null) => {
@@ -347,7 +355,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
               </div>
             </div>
             <StatusLegend />
-            <div aria-busy={isLoading} className="calendar-grid" role="grid">
+            <div aria-busy={isLoading} className="calendar-grid" ref={calendarGridRef} role="grid">
               {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((day) => <div className="calendar-grid__weekday" key={day} role="columnheader">{day}</div>)}
               {Array.from({ length: visibleDays[0]?.weekday ?? 0 }, (_, index) => <div aria-hidden="true" className="calendar-grid__blank" key={`blank-${index}`} />)}
               {visibleDays.map((day) => {
@@ -359,7 +367,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
           {isMobileViewport ? (
             <div className="mobile-drawer" hidden={!isMobileEditorOpen} ref={drawerRef}>
               <button aria-label="ปิดการตั้งค่าราคา" className="mobile-drawer__backdrop" onClick={closeMobileEditor} type="button" />
-              <PricingEditor {...editorProps} isDrawer onClose={closeMobileEditor} />
+              <PricingEditor {...editorProps} isDrawer onClose={closeMobileEditor} onReturnToCalendar={returnToCalendar} />
             </div>
           ) : (
             <PricingEditor {...editorProps} inspectorRef={desktopInspectorRef} />

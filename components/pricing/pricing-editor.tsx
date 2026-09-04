@@ -24,6 +24,7 @@ type PricingEditorProps = {
   onDelete: () => void;
   isDrawer?: boolean;
   onClose?: () => void;
+  onReturnToCalendar?: () => void;
   inspectorRef?: Ref<HTMLElement>;
 };
 
@@ -69,6 +70,7 @@ export function PricingEditor({
   onDelete,
   isDrawer = false,
   onClose,
+  onReturnToCalendar,
   inspectorRef,
 }: PricingEditorProps) {
   const disabled = !selectedRange || isSaving;
@@ -103,6 +105,8 @@ export function PricingEditor({
         {selectedRange ? <span className="pricing-editor__status-pill">{selectionStatus}</span> : null}
       </div>
 
+      {isDrawer && onReturnToCalendar ? <button className="pricing-editor__return-to-calendar" onClick={onReturnToCalendar} type="button">เลือกวันในปฏิทิน</button> : null}
+
       <div aria-label="โหมดตั้งราคา" className="pricing-editor__mode-switcher" role="group">
         <button aria-pressed={!isHotDeal} disabled={isSaving} onClick={() => onModeChange("daily-price")} type="button">ราคาพิเศษ</button>
         <button aria-pressed={isHotDeal} disabled={isSaving} onClick={() => onModeChange("hot-deal")} type="button">🔥 โปรไฟลุก</button>
@@ -113,11 +117,11 @@ export function PricingEditor({
       <div className="pricing-editor__fields">
         {isHotDeal ? (
           <>
-            <label htmlFor="hot-deal-price">
-              <span>ราคา Hot Deal</span>
+            <div className="pricing-field">
+              <label htmlFor="hot-deal-price">ราคา Hot Deal</label>
               <div className="price-input"><span>฿</span><input aria-label="ราคา Hot Deal" disabled={disabled} id="hot-deal-price" inputMode="numeric" min="1" onChange={(event) => onPriceChange(event.target.value)} type="number" value={netPrice} /></div>
               <div aria-label="ปรับราคา Hot Deal ครั้งละ 200 บาท" className="price-stepper"><button aria-label="-฿200" disabled={disabled} onClick={() => changePrice(-200)} type="button">− ฿200</button><button aria-label="+฿200" disabled={disabled} onClick={() => changePrice(200)} type="button">+ ฿200</button></div>
-            </label>
+            </div>
             <label htmlFor="hot-deal-show-before-days">
               <span>เริ่มแสดงล่วงหน้า</span>
               <input aria-label="เริ่มแสดงล่วงหน้า" disabled={disabled} id="hot-deal-show-before-days" inputMode="numeric" max="365" min="0" onChange={(event) => onShowBeforeDaysChange(event.target.value)} type="number" value={showBeforeDays} />
@@ -131,11 +135,11 @@ export function PricingEditor({
                 {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
-            <label htmlFor="pricing-net-price">
-              <span>ราคาสุทธิ</span>
+            <div className="pricing-field">
+              <label htmlFor="pricing-net-price">ราคาสุทธิ</label>
               <div className="price-input"><span>฿</span><input aria-label="ราคาสุทธิ" disabled={disabled} id="pricing-net-price" inputMode="numeric" min="1" onChange={(event) => onPriceChange(event.target.value)} type="number" value={netPrice} /></div>
               <div aria-label="ปรับราคาครั้งละ 200 บาท" className="price-stepper"><button aria-label="-฿200" disabled={disabled} onClick={() => changePrice(-200)} type="button">− ฿200</button><button aria-label="+฿200" disabled={disabled} onClick={() => changePrice(200)} type="button">+ ฿200</button></div>
-            </label>
+            </div>
           </>
         )}
         <label htmlFor={`${mode}-description`}>

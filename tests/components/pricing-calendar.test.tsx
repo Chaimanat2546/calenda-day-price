@@ -87,6 +87,30 @@ describe("PricingCalendar", () => {
     expect(within(day).getByText("฿1,500", { exact: true })).toBeTruthy();
   });
 
+  test("returns mobile Bulk Pricing to the calendar so a new range can be selected", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
+    await user.click(screen.getByRole("button", { name: "Bulk Pricing" }));
+    const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
+    await user.click(within(drawer).getByRole("button", { name: "เลือกวันในปฏิทิน" }));
+
+    const firstDay = screen.getByRole("button", { name: "เลือกวันที่ 1 เมษายน 2569" });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" })).toBeNull();
+      expect(document.activeElement).toBe(firstDay);
+    });
+    await user.click(firstDay);
+    expect((await screen.findByRole("button", { name: "บันทึกราคาพิเศษ" })).hasAttribute("disabled")).toBe(false);
+  });
+
   test("lists all pricing states in the legend", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
