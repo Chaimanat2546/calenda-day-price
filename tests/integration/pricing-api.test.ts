@@ -220,7 +220,7 @@ describe("pricing REST API", () => {
     await expect(response.json()).resolves.toEqual({ data: { deleted: 1 } });
   });
 
-  test("builds calendar display data from daily prices and active hot deals", async () => {
+  test("returns configured hot deals for the management calendar before their lead time", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-01T00:00:00.000Z"));
     vi.mocked(getDailyPricesInRange).mockResolvedValue([dailyPrice]);
@@ -230,7 +230,7 @@ describe("pricing REST API", () => {
         property_id: propertyId,
         date: "2026-04-15",
         net_price: 1200,
-        show_before_days: 365,
+        show_before_days: 7,
         description: "ดีลร้อน",
         created_at: "2026-04-01T00:00:00.000Z",
         updated_at: "2026-04-01T00:00:00.000Z",

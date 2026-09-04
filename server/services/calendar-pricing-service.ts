@@ -1,4 +1,4 @@
-import { addDays, rangeDates, resolveDailyPrice } from "@/lib/dates";
+import { rangeDates, resolveDailyPrice } from "@/lib/dates";
 import type {
   CalendarDayPrice,
   DailyPrice,
@@ -8,7 +8,6 @@ import type {
 type BuildCalendarDayPricesInput = {
   startDate: string;
   endDate: string;
-  today: string;
   dailyPrices: DailyPrice[];
   hotDeals: HotDeal[];
 };
@@ -16,7 +15,6 @@ type BuildCalendarDayPricesInput = {
 export function buildCalendarDayPrices({
   startDate,
   endDate,
-  today,
   dailyPrices,
   hotDeals,
 }: BuildCalendarDayPricesInput): CalendarDayPrice[] {
@@ -26,16 +24,13 @@ export function buildCalendarDayPrices({
   return rangeDates(startDate, endDate).map((date) => {
     const dailyPrice = dailyPricesByDate.get(date);
     const hotDeal = hotDealsByDate.get(date);
-    const isHotDealActive =
-      hotDeal !== undefined &&
-      today <= date &&
-      date <= addDays(today, hotDeal.show_before_days);
+    const isHotDealConfigured = hotDeal !== undefined;
 
     return {
       date,
       status_type: dailyPrice?.status_type ?? null,
-      net_price: isHotDealActive ? hotDeal.net_price : resolveDailyPrice(dailyPrice),
-      is_hot_deal: isHotDealActive,
+      net_price: isHotDealConfigured ? hotDeal.net_price : resolveDailyPrice(dailyPrice),
+      is_hot_deal: isHotDealConfigured,
     };
   });
 }

@@ -310,19 +310,18 @@ describe("hot deal pricing", () => {
     ).resolves.toEqual([first, last]);
   });
 
-  test("activates each date independently from its lead time", () => {
+  test("shows every configured hot deal in the management calendar regardless of lead time", () => {
     expect(
       buildCalendarDayPrices({
         startDate: "2026-12-20",
         endDate: "2026-12-21",
-        today: "2026-12-13",
         dailyPrices: [],
         hotDeals: [
           createHotDeal("first", "2026-12-20", 7),
           createHotDeal("second", "2026-12-21", 7),
         ],
       }).map((day) => day.is_hot_deal)
-    ).toEqual([true, false]);
+    ).toEqual([true, true]);
   });
 
   test("uses active hot deal price while keeping the holiday status", () => {
@@ -330,7 +329,6 @@ describe("hot deal pricing", () => {
       buildCalendarDayPrices({
         startDate: "2026-12-20",
         endDate: "2026-12-20",
-        today: "2026-12-13",
         dailyPrices: [{ ...createDailyPrice("holiday", "2026-12-20"), status_type: "holiday" }],
         hotDeals: [createHotDeal("deal", "2026-12-20", 7)],
       })[0]
@@ -341,35 +339,33 @@ describe("hot deal pricing", () => {
     });
   });
 
-  test("leaves the ordinary price when a hot deal is inactive", () => {
+  test("shows a scheduled hot deal in the management calendar before its public lead time", () => {
     expect(
       buildCalendarDayPrices({
         startDate: "2026-12-21",
         endDate: "2026-12-21",
-        today: "2026-12-13",
         dailyPrices: [createDailyPrice("promotion", "2026-12-21")],
         hotDeals: [createHotDeal("deal", "2026-12-21", 7)],
       })[0]
     ).toMatchObject({
       status_type: "promotion",
-      net_price: 2000,
-      is_hot_deal: false,
+        net_price: 1990,
+        is_hot_deal: true,
     });
   });
 
-  test("treats a hot deal as inactive after its deal date", () => {
+  test("keeps a configured hot deal visible in the management calendar after its deal date", () => {
     expect(
       buildCalendarDayPrices({
         startDate: "2026-12-20",
         endDate: "2026-12-20",
-        today: "2026-12-21",
         dailyPrices: [createDailyPrice("promotion", "2026-12-20")],
         hotDeals: [createHotDeal("expired", "2026-12-20", 7)],
       })[0]
     ).toMatchObject({
       status_type: "promotion",
-      net_price: 2000,
-      is_hot_deal: false,
+        net_price: 1990,
+        is_hot_deal: true,
     });
   });
 });

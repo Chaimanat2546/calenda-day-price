@@ -26,7 +26,7 @@
 - Hot Deal อยู่ในตาราง `hot_deals` แยกจาก Daily Price โดยมีราคา, จำนวนวันแสดงล่วงหน้า (`show_before_days`), หมายเหตุ และ `unique(property_id, date)` จึงมีได้หนึ่งดีลต่อบ้านพักต่อวัน
 - การตั้ง Daily Price เป็นช่วงวันจะคัดลอกสถานะ, ราคา และหมายเหตุเดียวกันไปยังแต่ละวัน
 - การบันทึก Hot Deal แบบช่วงวันจะขยายและบันทึกค่าชุดเดียวกันลงทุกวันในช่วงที่เลือก โดยตรวจวันชนก่อนและต้องยืนยันเมื่อจะเขียนทับ
-- Hot Deal จะ active เมื่อ `deal date - show_before_days <= today <= deal date` โดยใช้วันปัจจุบันใน `Asia/Bangkok`; เมื่อ active ราคา Hot Deal มีลำดับความสำคัญเหนือราคา Daily Price แต่ไม่เปลี่ยนสถานะฐาน
+- ปัจจุบัน `/calendar-prices` ใช้กับหน้าจัดการเท่านั้น: ทุกวันที่มี Hot Deal จะแสดงราคา Hot Deal และ `is_hot_deal: true` เสมอ โดยไม่พิจารณา `show_before_days`; จำนวนวันแสดงล่วงหน้าเก็บไว้สำหรับ public booking flow ในอนาคต ซึ่งยังไม่มีในระบบ
 - การลบ Daily Price ทำให้วันนั้นกลับไปใช้ราคาปกติ ฿1,500 ส่วนการลบ Hot Deal จะกลับไปใช้ Daily Price ของวันนั้นเมื่อมีอยู่ มิฉะนั้นจึงใช้ราคาปกติ
 
 ## Schema และ seed ของ Supabase
@@ -75,7 +75,7 @@ DELETE /api/properties/:propertyId/hot-deals?from=&to=
 
 - `POST /conflicts` ตรวจวันที่ชนโดยไม่เปลี่ยนข้อมูล
 - `PUT /range` จะตอบ `CONFLICT` ก่อนเมื่อพบวันเดิม และเขียนทับหลัง client ส่ง `confirmOverwrite: true`
-- `GET /calendar-prices` ส่งข้อมูลปฏิทินที่ resolve แล้ว รวมสถานะ Daily Price, ราคาแสดงผล และ `is_hot_deal` โดยคำนวณวันปัจจุบันครั้งเดียวใน `Asia/Bangkok`
+- `GET /calendar-prices` ส่งข้อมูลปฏิทินสำหรับหน้าจัดการ รวมสถานะ Daily Price, ราคาแสดงผล และ `is_hot_deal`; ทุก record ใน `hot_deals` ของช่วงที่ขอจะแสดงเป็น Hot Deal
 - Hot Deal APIs มีสัญญาเช่นเดียวกับ Daily Price ตามชนิดงาน: `POST /hot-deals/conflicts` ตรวจวันชน, `PUT /hot-deals/range` บันทึกหรือเขียนทับทั้งช่วงหลังยืนยัน, และ `DELETE /hot-deals` ลบเฉพาะ Hot Deal ในช่วงวันที่ระบุ
 - ทุก endpoint validate `propertyId`, ช่วงวัน, สถานะ และราคา; error code คือ `VALIDATION_ERROR`, `CONFLICT`, `NOT_FOUND`, `INTERNAL_ERROR`
 
@@ -84,7 +84,7 @@ DELETE /api/properties/:propertyId/hot-deals?from=&to=
 - หน้าหลักคือ calendar รายเดือน พร้อม Cell Inspector บน desktop และ bottom sheet บน mobile โดยไม่มีการสร้างหน้าใหม่
 - Cell Inspector มีตัวเลือกโหมด `ราคาพิเศษ` และ `🔥 Hot Deal`: โหมดราคาพิเศษตั้งได้เฉพาะ Holiday หรือ Promotion ส่วนโหมด Hot Deal ตั้งราคา, จำนวนวันแสดงล่วงหน้า และหมายเหตุแยกกัน
 - เลือกวันหนึ่งครั้งเพื่อเริ่มช่วง แล้วเลือกวันถัดไปเพื่อขยายช่วง
-- ปฏิทินประกอบ visual ของสถานะฐานกับ Hot Deal: Holiday คงพื้นเหลือง, Promotion คงสัญลักษณ์ `✦`, และ Hot Deal ที่ active เพิ่ม `🔥` พร้อมราคา Hot Deal โดยไม่แทนที่สถานะฐาน
+- ปฏิทินประกอบ visual ของสถานะฐานกับ Hot Deal: Holiday คงพื้นเหลือง, Promotion คงสัญลักษณ์ `✦`, และทุก Hot Deal ที่ตั้งไว้เพิ่ม `🔥` พร้อมราคา Hot Deal โดยไม่แทนที่สถานะฐาน
 - UI ต้องยึด layout และ design system จาก Stitch project `Calendar Pricing Day Cell` เป็น reference ไม่ออกแบบ visual system ใหม่เอง
 - การบันทึกซ้ำถูกป้องกันด้วย loading state; การลบถามยืนยันก่อนเสมอ
 

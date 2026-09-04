@@ -48,24 +48,16 @@ create table public.hot_deals (
 
 ## กฎแสดงผล
 
-ให้ `D` เป็นวันที่ของ Hot Deal และ `T` เป็นวันปัจจุบันในเขตเวลา `Asia/Bangkok`.
+ปัจจุบันระบบมีเฉพาะหน้าจัดการราคา ดังนั้นทุกวันที่มี record ใน `hot_deals` ต้องแสดงเป็น Hot Deal ทันที โดยไม่พิจารณา `show_before_days`.
 
-Hot Deal ของวัน `D` เป็น active ก็ต่อเมื่อ:
-
-```text
-D - show_before_days ≤ T ≤ D
-```
-
-ดังนั้นหากตั้ง 20–25 ธ.ค. และแสดงล่วงหน้า 7 วัน: วันที่ 13 ธ.ค. จะแสดง Hot Deal แค่ของวันที่ 20 ธ.ค.; วันที่ต่อ ๆ ไปค่อยแสดงวันถัดไปทีละวัน ไม่แสดงทั้งช่วงพร้อมกัน.
-
-เมื่อ Hot Deal active:
+เมื่อมี Hot Deal:
 
 - ราคาในปฏิทินเป็น `hot_deals.net_price`
 - แสดงเครื่องหมาย `🔥`
 - คงภาพของสถานะเดิม: Holiday ยังคงพื้นเหลือง; Promotion ยังคงเครื่องหมาย `✦`
 - ถ้าไม่มี Holiday หรือ Promotion ให้แสดงรูปแบบ Hot Deal เดี่ยว
 
-เมื่อยังไม่ active ให้ละเว้น Hot Deal สำหรับการแสดงผล และใช้ `daily_price` หรือราคาปกติตามเดิม.
+`show_before_days` ยังคงบันทึกไว้ในข้อมูล เพื่อใช้กำหนดช่วงเผยแพร่เมื่อมี public booking flow ในอนาคต; flow นั้นยังไม่อยู่ในขอบเขตของระบบปัจจุบัน.
 
 ## API และชั้นระบบ
 
@@ -78,7 +70,7 @@ PUT    /api/properties/:propertyId/hot-deals/range
 DELETE /api/properties/:propertyId/hot-deals?from=&to=
 ```
 
-`GET /calendar-prices` ทำงานใน service ฝั่ง server: อ่าน `daily_price` กับ `hot_deals`, ใช้วันปัจจุบันจาก `Asia/Bangkok`, แล้วคืน display model ต่อวันซึ่งมีราคาที่ใช้แสดง, สถานะพื้นฐาน และ flag Hot Deal. UI จึงไม่ต้องมี business rule การตัดสินราคา.
+`GET /calendar-prices` ทำงานใน service ฝั่ง server: อ่าน `daily_price` กับ `hot_deals` แล้วคืน display model สำหรับหน้าจัดการต่อวัน ซึ่งมีราคาที่ใช้แสดง, สถานะพื้นฐาน และ flag Hot Deal. UI จึงไม่ต้องมี business rule การตัดสินราคา.
 
 `POST /hot-deals/conflicts` และ `PUT /hot-deals/range` ตรวจเฉพาะ `hot_deals`. `PUT` จะตอบ `CONFLICT` พร้อมรายการวันที่เมื่อยังไม่ได้ยืนยัน และจะ upsert เฉพาะหลัง `confirmOverwrite: true`.
 
