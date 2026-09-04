@@ -47,8 +47,23 @@ const thaiConflictDateFormatter = new Intl.DateTimeFormat("th-TH", {
   timeZone: "Asia/Bangkok",
 });
 
+const thaiMobileDateFormatter = new Intl.DateTimeFormat("th-TH", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Asia/Bangkok",
+});
+
 function formatConflictDate(date: string): string {
   return thaiConflictDateFormatter.format(new Date(`${date}T12:00:00+07:00`));
+}
+
+function mobileSelectionLabel(range: PricingEditorProps["selectedRange"]): string {
+  if (!range) return "เลือกวันในปฏิทิน";
+  const formatDate = (date: string) => thaiMobileDateFormatter.format(new Date(`${date}T12:00:00+07:00`));
+  if (range.startDate === range.endDate) return formatDate(range.startDate);
+  return `${formatDate(range.startDate)} — ${formatDate(range.endDate)}`;
 }
 
 export function PricingEditor({
@@ -78,6 +93,7 @@ export function PricingEditor({
   const disabled = !selectedRange || isSaving;
   const isHotDeal = mode === "hot-deal";
   const selectionStatus = isHotDeal ? "โปรไฟลุก" : statusOptions.find((option) => option.value === statusType)?.label ?? "ราคาพิเศษ";
+  const drawerSelectionLabel = mobileSelectionLabel(selectedRange);
 
   function changePrice(delta: number): void {
     const currentPrice = Number(netPrice);
@@ -99,7 +115,7 @@ export function PricingEditor({
       <div className="pricing-editor__heading">
         <div>
           <p className="eyebrow">CELL INSPECTOR</p>
-          <h2>{isDrawer ? "ปรับแต่งราคา" : "ตั้งค่าราคาพิเศษ"}</h2>
+          <h2>{isDrawer ? `ปรับแต่งราคา (${drawerSelectionLabel})` : "ตั้งค่าราคาพิเศษ"}</h2>
         </div>
         {isDrawer && onClose ? (
           <button aria-label="ปิดการตั้งค่าราคา" autoFocus className="drawer-close" onClick={onClose} type="button">×</button>
@@ -108,7 +124,7 @@ export function PricingEditor({
         {selectedRange ? <span className="pricing-editor__status-pill">{selectionStatus}</span> : null}
       </div>
 
-      {isDrawer ? <p className="pricing-editor__mobile-context">{propertyName ?? "บ้านพัก"} · {selectionLabel(selectedRange)}</p> : null}
+      {isDrawer ? <p className="pricing-editor__mobile-context">{propertyName ?? "บ้านพัก"} · {drawerSelectionLabel}</p> : null}
 
       {isDrawer && onReturnToCalendar ? <button className="pricing-editor__return-to-calendar" onClick={onReturnToCalendar} type="button">เลือกวันในปฏิทิน</button> : null}
 

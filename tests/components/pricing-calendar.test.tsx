@@ -170,7 +170,8 @@ describe("PricingCalendar", () => {
     expect(within(day).getByText("฿1.5k", { exact: true })).toBeTruthy();
     await user.click(day);
     const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
-    expect(within(drawer).getByRole("heading", { name: "ปรับแต่งราคา" })).toBeTruthy();
+    expect(within(drawer).getByRole("heading", { name: "ปรับแต่งราคา (วันพุธที่ 15 เมษายน 2569)" })).toBeTruthy();
+    expect(within(drawer).getByText("บ้านพักตัวอย่าง · วันพุธที่ 15 เมษายน 2569")).toBeTruthy();
 
     await user.click(within(drawer).getByRole("button", { name: "🔥 โปรไฟลุก" }));
     const leadTimeInput = within(drawer).getByLabelText("เริ่มแสดงล่วงหน้า");
