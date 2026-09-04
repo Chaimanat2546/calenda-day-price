@@ -111,6 +111,21 @@ describe("daily-price validation and dates", () => {
     expect(result.success).toBe(false);
   });
 
+  test("limits an inclusive date range to 366 days", () => {
+    expect(
+      dailyPriceValidation.dateRangeSchema.safeParse({
+        startDate: "2026-01-01",
+        endDate: "2027-01-01",
+      }).success
+    ).toBe(true);
+    expect(
+      dailyPriceValidation.dateRangeSchema.safeParse({
+        startDate: "2026-01-01",
+        endDate: "2027-01-02",
+      }).success
+    ).toBe(false);
+  });
+
   test("expands an ISO date range inclusively", () => {
     expect(rangeDates("2026-04-15", "2026-04-17")).toEqual([
       "2026-04-15",
@@ -208,6 +223,46 @@ describe("hot deal pricing", () => {
     expect(client.writes).toEqual([]);
   });
 
+  test("returns the current conflict after an unconfirmed insert loses a race", async () => {
+    const concurrentDeal = createHotDeal("concurrent", "2026-12-21");
+    const client = createHotDealClient([], {
+      concurrentDeal,
+      insertError: { code: "23505", message: "duplicate key value" },
+    });
+
+    const result = await applyHotDealRange(client, {
+      propertyId,
+      startDate: "2026-12-20",
+      endDate: "2026-12-22",
+      netPrice: 1990,
+      showBeforeDays: 7,
+      description: null,
+      confirmed: false,
+    });
+
+    expect(result).toEqual({ status: "CONFLICT", dates: ["2026-12-21"] });
+    expect(client.upserts).toEqual([]);
+  });
+
+  test("preserves an ordinary unconfirmed insert error", async () => {
+    const client = createHotDealClient([], {
+      insertError: { code: "42501", message: "permission denied" },
+    });
+
+    await expect(
+      applyHotDealRange(client, {
+        propertyId,
+        startDate: "2026-12-20",
+        endDate: "2026-12-22",
+        netPrice: 1990,
+        showBeforeDays: 7,
+        description: null,
+        confirmed: false,
+      })
+    ).rejects.toThrow("Unable to access hot deals");
+    expect(client.upserts).toEqual([]);
+  });
+
   test("reports conflicts for the selected hot deal range", async () => {
     const client = createHotDealClient([createHotDeal("existing", "2026-12-21")]);
 
@@ -301,6 +356,22 @@ describe("hot deal pricing", () => {
       is_hot_deal: false,
     });
   });
+
+  test("treats a hot deal as inactive after its deal date", () => {
+    expect(
+      buildCalendarDayPrices({
+        startDate: "2026-12-20",
+        endDate: "2026-12-20",
+        today: "2026-12-21",
+        dailyPrices: [createDailyPrice("promotion", "2026-12-20")],
+        hotDeals: [createHotDeal("expired", "2026-12-20", 7)],
+      })[0]
+    ).toMatchObject({
+      status_type: "promotion",
+      net_price: 2000,
+      is_hot_deal: false,
+    });
+  });
 });
 
 type PriceRow = Pick<
@@ -353,17 +424,36 @@ type HotDealRow = Pick<
   "property_id" | "date" | "net_price" | "show_before_days" | "description"
 >;
 
-function createHotDealClient(existing: HotDeal[] = []) {
+type HotDealClientOptions = {
+  concurrentDeal?: HotDeal;
+  insertError?: { code: string; message: string };
+};
+
+function createHotDealClient(
+  existing: HotDeal[] = [],
+  options: HotDealClientOptions = {}
+) {
   const writes: HotDealRow[] = [];
-  const selectedDates = existing.map(({ date }) => ({ date }));
+  const upserts: HotDealRow[] = [];
+  let insertAttempted = false;
 
   const query = {
     eq: () => query,
     gte: () => query,
     lte: () => query,
     order: () => query,
-    then: (onfulfilled: (result: { data: { date: string }[]; error: null }) => unknown) =>
-      Promise.resolve({ data: selectedDates, error: null }).then(onfulfilled),
+    then: (onfulfilled: (result: { data: { date: string }[]; error: null }) => unknown) => {
+      const visibleDeals = [
+        ...existing,
+        ...(insertAttempted && options.concurrentDeal
+          ? [options.concurrentDeal]
+          : []),
+      ];
+      return Promise.resolve({
+        data: visibleDeals.map(({ date }) => ({ date })),
+        error: null,
+      }).then(onfulfilled);
+    },
   };
 
   const deleteQuery = {
@@ -377,15 +467,39 @@ function createHotDealClient(existing: HotDeal[] = []) {
 
   return {
     writes,
+    upserts,
     from: () => ({
       select: () => query,
+      insert: (rows: HotDealRow[]) => {
+        insertAttempted = true;
+        const insertError =
+          options.insertError ??
+          (existing.some((deal) => rows.some((row) => row.date === deal.date))
+            ? { code: "23505", message: "duplicate key value" }
+            : undefined);
+        if (insertError) {
+          return {
+            select: () =>
+              Promise.resolve({ data: null, error: insertError }),
+          };
+        }
+
+        writes.push(...rows);
+        return {
+          select: () => Promise.resolve({ data: rows, error: null }),
+        };
+      },
       upsert: (rows: HotDealRow[]) => {
         writes.push(...rows);
+        upserts.push(...rows);
         return {
           select: () => Promise.resolve({ data: rows, error: null }),
         };
       },
       delete: () => deleteQuery,
     }),
-  } as unknown as HotDealRepositoryClient & { writes: HotDealRow[] };
+  } as unknown as HotDealRepositoryClient & {
+    writes: HotDealRow[];
+    upserts: HotDealRow[];
+  };
 }

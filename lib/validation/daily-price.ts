@@ -4,6 +4,8 @@ import { STATUS_TYPES } from "@/server/types/pricing";
 
 export const isoDateSchema = z.iso.date();
 
+const MAX_RANGE_SPAN_MS = 365 * 24 * 60 * 60 * 1000;
+
 export const dateRangeSchema = z
   .object({
     startDate: isoDateSchema,
@@ -12,7 +14,17 @@ export const dateRangeSchema = z
   .refine(({ startDate, endDate }) => startDate <= endDate, {
     message: "startDate must not be after endDate",
     path: ["endDate"],
-  });
+  })
+  .refine(
+    ({ startDate, endDate }) =>
+      Date.parse(`${endDate}T00:00:00.000Z`) -
+        Date.parse(`${startDate}T00:00:00.000Z`) <=
+      MAX_RANGE_SPAN_MS,
+    {
+      message: "date range must not exceed 366 inclusive days",
+      path: ["endDate"],
+    }
+  );
 
 export const rangeInputSchema = dateRangeSchema.extend({
   statusType: z.enum(STATUS_TYPES),

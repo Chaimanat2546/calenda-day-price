@@ -9,7 +9,8 @@ Demo สำหรับจัดการราคาสุทธิรายว
 - ราคาปกติถูกกำหนดคงที่เป็น **฿1,500** ในโค้ด
 - `daily_price` เก็บเฉพาะวันที่มีสถานะพิเศษ (sparse override) วันที่ไม่มี record จะใช้ราคาปกติ
 - หนึ่งบ้านพักมี override ได้หนึ่งรายการต่อวัน
-- สถานะ: `holiday`, `promotion`, `hot_deal`, `holiday_hot_deal`
+- สถานะ Daily Price: `holiday`, `promotion`
+- `hot_deals` เก็บราคา Hot Deal แยกจาก Daily Price และแสดงทับราคาเดิมเฉพาะช่วงที่ดีล active
 
 ## เริ่มต้นใช้งาน
 
@@ -70,5 +71,9 @@ npm run build    # production build
 | POST | `/api/properties/:propertyId/daily-prices/conflicts` | ตรวจวันซ้ำโดยไม่เขียนข้อมูล |
 | PUT | `/api/properties/:propertyId/daily-prices/range` | ตั้งราคาและสถานะเป็นช่วงวัน; ส่ง `confirmOverwrite: true` เมื่อต้องการยืนยันเขียนทับ |
 | DELETE | `/api/properties/:propertyId/daily-prices?from=&to=` | ลบ override เพื่อกลับสู่ราคาปกติ |
+| GET | `/api/properties/:propertyId/calendar-prices?from=&to=` | อ่านราคาที่ resolve แล้วสำหรับแสดงในปฏิทิน รวม Hot Deal ที่ active |
+| POST | `/api/properties/:propertyId/hot-deals/conflicts` | ตรวจวัน Hot Deal ซ้ำโดยไม่เขียนข้อมูล |
+| PUT | `/api/properties/:propertyId/hot-deals/range` | ตั้ง Hot Deal เป็นช่วงวัน; ส่ง `confirmOverwrite: true` เมื่อต้องการยืนยันเขียนทับ |
+| DELETE | `/api/properties/:propertyId/hot-deals?from=&to=` | ลบ Hot Deal เพื่อกลับไปใช้ Daily Price ของวันนั้น หรือราคาปกติเมื่อไม่มี Daily Price |
 
 รายละเอียด architecture, data model และข้อจำกัดเพิ่มเติมอยู่ใน [CONTEXT.md](./CONTEXT.md)

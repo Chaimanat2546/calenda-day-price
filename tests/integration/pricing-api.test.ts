@@ -257,6 +257,23 @@ describe("pricing REST API", () => {
     });
   });
 
+  test("rejects an oversized calendar range before property or pricing access", async () => {
+    const response = await getCalendarPrices(
+      new Request(
+        `http://localhost/api/properties/${propertyId}/calendar-prices?from=2026-01-01&to=2027-01-02`
+      ),
+      context()
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "VALIDATION_ERROR" },
+    });
+    expect(getPropertyById).not.toHaveBeenCalled();
+    expect(getDailyPricesInRange).not.toHaveBeenCalled();
+    expect(getHotDealsInRange).not.toHaveBeenCalled();
+  });
+
   test("checks hot deal conflicts without changing deals", async () => {
     vi.mocked(checkHotDealConflictsFromService).mockResolvedValue({
       dates: ["2026-04-16"],

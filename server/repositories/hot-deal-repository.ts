@@ -7,8 +7,12 @@ export type HotDealWrite = Pick<
 
 type QueryResult<T> = {
   data: T | null;
-  error: { message: string } | null;
+  error: { code?: string; message: string } | null;
 };
+
+export type InsertHotDealsResult =
+  | { status: "OK"; data: HotDeal[] }
+  | { status: "UNIQUE_VIOLATION" };
 
 interface HotDealQuery extends PromiseLike<QueryResult<HotDeal[]>> {
   eq(column: string, value: string): HotDealQuery;
@@ -31,6 +35,9 @@ export interface HotDealRepositoryClient {
       rows: HotDealWrite[],
       options: { onConflict: "property_id,date" }
     ): {
+      select(columns?: string): HotDealQuery;
+    };
+    insert(rows: HotDealWrite[]): {
       select(columns?: string): HotDealQuery;
     };
     delete(): HotDealMutationQuery;
@@ -89,6 +96,19 @@ export async function upsertHotDeals(
       .upsert(rows, { onConflict: "property_id,date" })
       .select()
   );
+}
+
+export async function insertHotDeals(
+  client: HotDealRepositoryClient,
+  rows: HotDealWrite[]
+): Promise<InsertHotDealsResult> {
+  const result = await client.from("hot_deals").insert(rows).select();
+
+  if (result.error?.code === "23505") {
+    return { status: "UNIQUE_VIOLATION" };
+  }
+
+  return { status: "OK", data: assertSuccess(result) };
 }
 
 export async function deleteHotDealsInRange(

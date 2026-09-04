@@ -26,8 +26,8 @@
 - Hot Deal อยู่ในตาราง `hot_deals` แยกจาก Daily Price โดยมีราคา, จำนวนวันแสดงล่วงหน้า (`show_before_days`), หมายเหตุ และ `unique(property_id, date)` จึงมีได้หนึ่งดีลต่อบ้านพักต่อวัน
 - การตั้ง Daily Price เป็นช่วงวันจะคัดลอกสถานะ, ราคา และหมายเหตุเดียวกันไปยังแต่ละวัน
 - การบันทึก Hot Deal แบบช่วงวันจะขยายและบันทึกค่าชุดเดียวกันลงทุกวันในช่วงที่เลือก โดยตรวจวันชนก่อนและต้องยืนยันเมื่อจะเขียนทับ
-- Hot Deal จะ active สำหรับแต่ละวันที่ `Asia/Bangkok` ตั้งแต่วันปัจจุบันถึงวันดีลบวก `show_before_days`; เมื่อ active ราคา Hot Deal มีลำดับความสำคัญเหนือราคา Daily Price แต่ไม่เปลี่ยนสถานะฐาน
-- การลบ override ทำให้วันนั้นกลับไปใช้ราคาปกติ ฿1,500
+- Hot Deal จะ active เมื่อ `deal date - show_before_days <= today <= deal date` โดยใช้วันปัจจุบันใน `Asia/Bangkok`; เมื่อ active ราคา Hot Deal มีลำดับความสำคัญเหนือราคา Daily Price แต่ไม่เปลี่ยนสถานะฐาน
+- การลบ Daily Price ทำให้วันนั้นกลับไปใช้ราคาปกติ ฿1,500 ส่วนการลบ Hot Deal จะกลับไปใช้ Daily Price ของวันนั้นเมื่อมีอยู่ มิฉะนั้นจึงใช้ราคาปกติ
 
 ## Schema และ seed ของ Supabase
 
@@ -46,13 +46,13 @@ Calendar UI
 → fetch('/api/...')
 → Next.js Route Handler
 → Zod validation
-→ pricing service
+→ pricing-service / hot-deal-service / calendar-pricing-service
 → repository
 → Supabase
 ```
 
 - UI อยู่ใน `components/pricing/` และไม่ query ฐานข้อมูลโดยตรง
-- business rule อยู่ใน `server/services/pricing-service.ts`
+- business rule อยู่ใน `server/services/pricing-service.ts`, `server/services/hot-deal-service.ts` และ `server/services/calendar-pricing-service.ts`
 - repository อ่าน/เขียน Supabase เท่านั้น อยู่ใน `server/repositories/`
 - browser และ server ใช้ Supabase client จาก `lib/client.ts` และ `lib/server.ts` ตามลำดับ
 

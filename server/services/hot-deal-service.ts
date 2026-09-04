@@ -7,6 +7,7 @@ import type {
 import {
   deleteHotDealsInRange,
   findHotDealConflicts,
+  insertHotDeals,
   type HotDealRepositoryClient,
   type HotDealWrite,
   upsertHotDeals,
@@ -31,12 +32,6 @@ export async function applyHotDealRange(
   client: HotDealRepositoryClient,
   input: HotDealRangeInput
 ): Promise<{ status: "CONFLICT"; dates: string[] } | { status: "OK"; data: HotDeal[] }> {
-  const { dates } = await checkHotDealConflicts(client, input);
-
-  if (dates.length > 0 && !input.confirmed) {
-    return { status: "CONFLICT", dates };
-  }
-
   const rows: HotDealWrite[] = rangeDates(input.startDate, input.endDate).map(
     (date) => ({
       property_id: input.propertyId,
@@ -47,7 +42,17 @@ export async function applyHotDealRange(
     })
   );
 
-  return { status: "OK", data: await upsertHotDeals(client, rows) };
+  if (input.confirmed) {
+    return { status: "OK", data: await upsertHotDeals(client, rows) };
+  }
+
+  const inserted = await insertHotDeals(client, rows);
+  if (inserted.status === "UNIQUE_VIOLATION") {
+    const { dates } = await checkHotDealConflicts(client, input);
+    return { status: "CONFLICT", dates };
+  }
+
+  return { status: "OK", data: inserted.data };
 }
 
 export async function deleteHotDealRange(
