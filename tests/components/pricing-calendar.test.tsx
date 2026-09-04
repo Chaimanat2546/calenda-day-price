@@ -139,6 +139,14 @@ describe("PricingCalendar", () => {
         `/api/properties/${property.id}/daily-prices/conflicts`,
         expect.objectContaining({ method: "POST" })
       );
+      const conflictRequest = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).endsWith("/daily-prices/conflicts") && init?.method === "POST"
+      );
+      expect(conflictRequest).toBeTruthy();
+      expect(JSON.parse(String(conflictRequest?.[1]?.body))).toEqual({
+        startDate: "2026-04-15",
+        endDate: "2026-04-17",
+      });
     });
     expect(await screen.findByText("พบราคาพิเศษ 1 วันในช่วงที่เลือก")).toBeTruthy();
     expect(screen.getByText("16 เมษายน 2569")).toBeTruthy();
