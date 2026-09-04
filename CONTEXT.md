@@ -35,8 +35,11 @@
   - `properties`: บ้านพัก
   - `daily_price`: ราคาพิเศษรายวัน พร้อม foreign key ไป `properties`, check constraint ของสถานะ/ราคา และ unique ต่อบ้านพัก-วัน
   - `hot_deals`: ดีลรายวันแยกต่างหาก พร้อม foreign key ไป `properties`, check constraint ของราคา/วันแสดงล่วงหน้า และ unique ต่อบ้านพัก-วัน
+- migration สิทธิ์ Data API: `supabase/migrations/20260904095533_grant_pricing_api_access.sql`
+  - grant สิทธิ์อ่าน `properties` และสิทธิ์จัดการ `daily_price`/`hot_deals` ให้ `anon`, `authenticated`
+  - เปิด RLS ทั้งสามตาราง แต่ policy ปัจจุบันยังเป็น demo policy ที่อนุญาตทุกแถว เพื่อให้ UI ที่ยังไม่มี login ใช้งานได้
 - seed ที่เขียนไว้: `supabase/seed.sql` สร้าง “บ้านพักตัวอย่าง” เมื่อยังไม่มีบ้านพัก
-- **สถานะ: migration และ seed ยังไม่ได้ apply กับ Supabase** ตามขอบเขตงานนี้ ต้องให้ผู้ใช้รันผ่าน workflow ของ Supabase ที่ต้องการก่อนใช้งานจริง
+- **สถานะ local: migration ทั้งสองและ seed ถูก apply แล้ว**; การ deploy/remote ต้อง apply ผ่าน workflow ของ Supabase ที่ต้องการ
 - ห้ามใส่ค่า environment variable หรือ credential ในเอกสารและ commit
 
 ## Architecture
@@ -87,7 +90,6 @@ DELETE /api/properties/:propertyId/hot-deals?from=&to=
 
 ## ข้อจำกัดและงานต่อไป
 
-1. Apply migration และ seed ใน Supabase ก่อนทดสอบกับข้อมูลจริง
-2. เพิ่ม RLS, authentication และ authorization ฝั่ง server ก่อนเปิดให้ผู้ใช้จริงใช้งาน
-3. เมื่อมีหลายผู้ใช้หรือหลายองค์กร ให้เพิ่ม tenant/data scope และ policy ที่ชัดเจน
-4. ตรวจ flow ของ `lib/middleware.ts` อีกครั้งเมื่อเริ่มทำ auth เพราะ demo ปัจจุบันไม่มี auth flow ใน UI
+1. แทนที่ demo RLS policy ด้วย authentication, tenant/data scope และ ownership predicate ก่อนเปิดให้ผู้ใช้จริงใช้งาน
+2. Apply migration ทั้งสองกับ Supabase remote ผ่าน workflow ที่ต้องการก่อนใช้งานจริง
+3. ตรวจ flow ของ `lib/middleware.ts` อีกครั้งเมื่อเริ่มทำ auth เพราะ demo ปัจจุบันไม่มี auth flow ใน UI
