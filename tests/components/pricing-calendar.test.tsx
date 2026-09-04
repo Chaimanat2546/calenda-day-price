@@ -56,7 +56,53 @@ describe("PricingCalendar", () => {
     expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ปิดการตั้งค่าราคา" }));
     await user.tab({ shift: true });
     expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ลบสถานะในช่วงนี้" }));
+    await user.tab();
+    expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ปิดการตั้งค่าราคา" }));
     await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" })).toBeNull();
+    });
+    expect(document.activeElement).toBe(opener);
+  });
+
+  test("restores focus after closing the mobile pricing drawer from its backdrop", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
+    const opener = screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" });
+    await user.click(opener);
+    await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
+    const backdrop = document.querySelector<HTMLButtonElement>(".mobile-drawer__backdrop");
+    expect(backdrop).not.toBeNull();
+    await user.click(backdrop!);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" })).toBeNull();
+    });
+    expect(document.activeElement).toBe(opener);
+  });
+
+  test("restores focus after closing the mobile pricing drawer from its close button", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
+    const opener = screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" });
+    await user.click(opener);
+    const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
+    await user.click(within(drawer).getByRole("button", { name: "ปิดการตั้งค่าราคา" }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" })).toBeNull();
     });
