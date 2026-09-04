@@ -184,7 +184,7 @@ describe("PricingCalendar", () => {
     expect(within(drawer).getByRole("button", { name: "7 วัน (แนะนำ)" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  test("restores focus after closing the mobile pricing drawer from its backdrop", async () => {
+  test("closes the mobile pricing drawer from its backdrop and restores opener focus", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
       .fn<typeof fetch>()

@@ -238,8 +238,8 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .pricing-editor__message { color: #5c647b; font-size: .75rem; line-height: 1.45; margin: 14px 0 0; }
 .pricing-editor__return-to-calendar { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; color: #4338ca; font-size: .76rem; font-weight: 800; margin-top: 14px; min-height: 38px; padding: 0 11px; width: 100%; }
 .mobile-drawer { inset: 0; position: fixed; z-index: 30; }
-.mobile-drawer__backdrop { background: rgb(26 31 48 / .42); border: 0; inset: 0; position: absolute; width: 100%; }
-.mobile-drawer .pricing-editor { border-bottom-left-radius: 0; border-bottom-right-radius: 0; bottom: 0; margin: 0; max-height: min(82vh, 690px); overflow-y: auto; position: absolute; width: 100%; }
+.mobile-drawer__backdrop { background: rgb(26 31 48 / .42); border: 0; height: 100%; inset: 0; position: absolute; width: 100%; z-index: 0; }
+.mobile-drawer .pricing-editor { border-bottom-left-radius: 0; border-bottom-right-radius: 0; bottom: 0; margin: 0; max-height: min(82vh, 690px); overflow-y: auto; position: absolute; width: 100%; z-index: 1; }
 
 @media (max-width: 1023px) {
   .app-header { min-height: 64px; padding: 10px 14px; }
