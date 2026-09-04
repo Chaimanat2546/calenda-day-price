@@ -191,6 +191,7 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .pricing-day__mark { align-items: center; color: #e95737; display: inline-flex; font-size: .7rem; height: 14px; justify-content: center; }
 .pricing-day__mark--tag { color: var(--rose); font-size: .85rem; }
 .pricing-day__price { color: #707892; font-size: .57rem; font-weight: 650; letter-spacing: -.02em; }
+.pricing-day__price--mobile { display: none; }
 .pricing-day__base-price { color: #9299ad; font-size: .54rem; font-weight: 600; letter-spacing: -.02em; text-decoration: line-through; }
 .pricing-day--holiday { background: var(--yellow); color: #644b18; }
 .pricing-day--holiday:hover { background: #ffe887; }
@@ -239,6 +240,44 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .mobile-drawer { inset: 0; position: fixed; z-index: 30; }
 .mobile-drawer__backdrop { background: rgb(26 31 48 / .42); border: 0; inset: 0; position: absolute; width: 100%; }
 .mobile-drawer .pricing-editor { border-bottom-left-radius: 0; border-bottom-right-radius: 0; bottom: 0; margin: 0; max-height: min(82vh, 690px); overflow-y: auto; position: absolute; width: 100%; }
+
+@media (max-width: 1023px) {
+  .app-header { min-height: 64px; padding: 10px 14px; }
+  .app-header h1 { font-size: 1.04rem; }
+  .app-header .eyebrow { font-size: .54rem; margin-bottom: 5px; }
+  .pricing-layout { gap: 12px; padding: 12px; }
+  .calendar-card { border-radius: 14px; padding: 14px 8px 10px; }
+  .calendar-card__topline { align-items: flex-start; gap: 8px; margin: 0 5px 13px; }
+  .calendar-card__topline h2 { font-size: 1rem; }
+  .calendar-card__controls { align-items: flex-end; flex-direction: column-reverse; gap: 6px; }
+  .bulk-pricing-trigger { font-size: .65rem; min-height: 28px; padding: 0 7px; }
+  .month-controls { gap: 2px; }
+  .month-controls button { font-size: .7rem; height: 28px; min-width: 28px; padding: 0 6px; }
+  .status-legend { gap: 5px 8px; margin: 0 5px 10px; }
+  .status-legend__item { font-size: .58rem; gap: 3px; }
+  .status-legend__swatch { height: 12px; width: 12px; }
+  .calendar-grid__weekday { font-size: .58rem; padding-bottom: 7px; }
+  .calendar-grid__blank { min-height: 44px; }
+  .pricing-day { border-radius: 7px; font-size: .66rem; gap: 0; margin: 1px; min-height: 44px; padding: 5px 3px; }
+  .pricing-day__mark { font-size: .6rem; height: 11px; }
+  .pricing-day__mark--tag { font-size: .65rem; }
+  .pricing-day__price--desktop { display: none; }
+  .pricing-day__price--mobile { display: inline; font-size: .54rem; line-height: 1.1; }
+  .pricing-day__base-price { display: none; }
+  .mobile-drawer .pricing-editor { border: 0; border-radius: 20px 20px 0 0; box-shadow: 0 -12px 35px rgb(15 23 42 / .16); max-height: min(86dvh, 710px); padding: 13px 16px max(18px, env(safe-area-inset-bottom)); }
+  .mobile-drawer__handle { background: #cbd5e1; border-radius: 999px; height: 4px; margin: 0 auto 13px; width: 38px; }
+  .mobile-drawer .pricing-editor__heading { padding-bottom: 10px; }
+  .mobile-drawer .pricing-editor__heading .eyebrow { display: none; }
+  .mobile-drawer .pricing-editor__heading h2 { font-size: 1.12rem; }
+  .mobile-drawer .pricing-editor__range { font-size: .7rem; margin-top: 5px; }
+  .pricing-editor__mobile-context { color: #64748b; font-size: .72rem; margin: 10px 0 0; overflow-wrap: anywhere; }
+  .mobile-drawer .pricing-editor__mode-switcher { margin-top: 13px; }
+  .mobile-drawer .pricing-editor__base-price { margin: 12px 0; }
+  .lead-time-presets { display: grid; gap: 7px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lead-time-presets button { background: #f8fafc; border: 1px solid #dbe1ea; border-radius: 8px; color: #475569; font-size: .72rem; font-weight: 750; min-height: 36px; padding: 0 7px; }
+  .lead-time-presets button[aria-pressed="true"] { background: #eef2ff; border-color: #818cf8; color: #4338ca; }
+  .mobile-drawer .pricing-editor__actions { margin-top: 15px; padding-bottom: 2px; }
+}
 
 @media (min-width: 680px) {
   .app-header { padding: 16px 30px; }

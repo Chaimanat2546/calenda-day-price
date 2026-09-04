@@ -16,6 +16,11 @@ const statusLabels: Record<StatusType, string> = {
   promotion: "โปรโมชั่น",
 };
 
+function formatCompactPrice(price: number): string {
+  const thousands = price / 1000;
+  return `฿${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}k`;
+}
+
 export function CalendarDayCell({
   date,
   day,
@@ -36,7 +41,7 @@ export function CalendarDayCell({
       ? " pricing-day--in-range"
       : "";
   const statusLabel = `${status ? `, ${statusLabels[status]}` : ""}${calendarPrice?.is_hot_deal ? ", โปรไฟลุก" : ""}`;
-  const activePrice = hasSpecialPrice ? calendarPrice?.net_price : BASE_DAILY_PRICE;
+  const activePrice = hasSpecialPrice ? calendarPrice?.net_price ?? BASE_DAILY_PRICE : BASE_DAILY_PRICE;
 
   return (
     <button
@@ -53,7 +58,8 @@ export function CalendarDayCell({
       {calendarPrice?.is_hot_deal ? (
         <span aria-label="โปรไฟลุก" className="pricing-day__mark" role="img">🔥</span>
       ) : null}
-      <span className="pricing-day__price">฿{activePrice?.toLocaleString("th-TH")}</span>
+      <span aria-hidden="true" className="pricing-day__price pricing-day__price--mobile">{formatCompactPrice(activePrice)}</span>
+      <span className="pricing-day__price pricing-day__price--desktop">฿{activePrice.toLocaleString("th-TH")}</span>
       {hasSpecialPrice ? <span className="pricing-day__base-price">฿{BASE_DAILY_PRICE.toLocaleString("th-TH")}</span> : null}
     </button>
   );

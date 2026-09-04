@@ -156,6 +156,32 @@ describe("PricingCalendar", () => {
     expect(document.activeElement).toBe(opener);
   });
 
+  test("shows the Stitch mobile inspector and applies a Hot Deal lead-time preset", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    const day = await screen.findByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" });
+    expect(within(day).getByText("฿1.5k", { exact: true })).toBeTruthy();
+    await user.click(day);
+    const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
+    expect(within(drawer).getByRole("heading", { name: "ปรับแต่งราคา" })).toBeTruthy();
+
+    await user.click(within(drawer).getByRole("button", { name: "🔥 โปรไฟลุก" }));
+    const leadTimeInput = within(drawer).getByLabelText("เริ่มแสดงล่วงหน้า");
+    await user.clear(leadTimeInput);
+    await user.type(leadTimeInput, "5");
+    await user.click(within(drawer).getByRole("button", { name: "7 วัน (แนะนำ)" }));
+
+    expect((leadTimeInput as HTMLInputElement).value).toBe("7");
+    expect(within(drawer).getByRole("button", { name: "7 วัน (แนะนำ)" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
   test("restores focus after closing the mobile pricing drawer from its backdrop", async () => {
     const user = userEvent.setup();
     const fetchMock = vi

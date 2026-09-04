@@ -324,6 +324,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     onSave: () => void saveRange(false),
     onShowBeforeDaysChange: setShowBeforeDays,
     onStatusChange: setStatusType,
+    propertyName: activeProperty?.name,
     selectedRange,
     showBeforeDays,
     statusType,

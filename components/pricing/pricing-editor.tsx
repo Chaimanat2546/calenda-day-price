@@ -26,6 +26,7 @@ type PricingEditorProps = {
   onClose?: () => void;
   onReturnToCalendar?: () => void;
   inspectorRef?: Ref<HTMLElement>;
+  propertyName?: string;
 };
 
 const statusOptions: Array<{ value: StatusType; label: string }> = [
@@ -72,6 +73,7 @@ export function PricingEditor({
   onClose,
   onReturnToCalendar,
   inspectorRef,
+  propertyName,
 }: PricingEditorProps) {
   const disabled = !selectedRange || isSaving;
   const isHotDeal = mode === "hot-deal";
@@ -93,10 +95,11 @@ export function PricingEditor({
       role={isDrawer ? "dialog" : undefined}
       tabIndex={isDrawer ? undefined : -1}
     >
+      {isDrawer ? <div aria-hidden="true" className="mobile-drawer__handle" /> : null}
       <div className="pricing-editor__heading">
         <div>
           <p className="eyebrow">CELL INSPECTOR</p>
-          <h2>ตั้งค่าราคาพิเศษ</h2>
+          <h2>{isDrawer ? "ปรับแต่งราคา" : "ตั้งค่าราคาพิเศษ"}</h2>
         </div>
         {isDrawer && onClose ? (
           <button aria-label="ปิดการตั้งค่าราคา" autoFocus className="drawer-close" onClick={onClose} type="button">×</button>
@@ -104,6 +107,8 @@ export function PricingEditor({
         <p className="pricing-editor__range">{selectionLabel(selectedRange)}</p>
         {selectedRange ? <span className="pricing-editor__status-pill">{selectionStatus}</span> : null}
       </div>
+
+      {isDrawer ? <p className="pricing-editor__mobile-context">{propertyName ?? "บ้านพัก"} · {selectionLabel(selectedRange)}</p> : null}
 
       {isDrawer && onReturnToCalendar ? <button className="pricing-editor__return-to-calendar" onClick={onReturnToCalendar} type="button">เลือกวันในปฏิทิน</button> : null}
 
@@ -126,6 +131,21 @@ export function PricingEditor({
               <span>เริ่มแสดงล่วงหน้า</span>
               <input aria-label="เริ่มแสดงล่วงหน้า" disabled={disabled} id="hot-deal-show-before-days" inputMode="numeric" max="365" min="0" onChange={(event) => onShowBeforeDaysChange(event.target.value)} type="number" value={showBeforeDays} />
             </label>
+            {isDrawer ? (
+              <div aria-label="ตัวเลือกระยะเวลาแสดง Hot Deal" className="lead-time-presets" role="group">
+                {[3, 7, 14, 30].map((days) => (
+                  <button
+                    aria-pressed={Number(showBeforeDays) === days}
+                    disabled={disabled}
+                    key={days}
+                    onClick={() => onShowBeforeDaysChange(String(days))}
+                    type="button"
+                  >
+                    {days === 7 ? "7 วัน (แนะนำ)" : `${days} วัน`}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </>
         ) : (
           <>
