@@ -14,6 +14,8 @@ type PricingEditorProps = {
   onSave: () => void;
   onConfirmOverwrite: () => void;
   onDelete: () => void;
+  isDrawer?: boolean;
+  onClose?: () => void;
 };
 
 const statusOptions: Array<{ value: StatusType; label: string }> = [
@@ -27,6 +29,17 @@ function selectionLabel(range: PricingEditorProps["selectedRange"]): string {
   if (!range) return "เลือกวันในปฏิทิน";
   if (range.startDate === range.endDate) return range.startDate;
   return `${range.startDate} — ${range.endDate}`;
+}
+
+const thaiConflictDateFormatter = new Intl.DateTimeFormat("th-TH", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Asia/Bangkok",
+});
+
+function formatConflictDate(date: string): string {
+  return thaiConflictDateFormatter.format(new Date(`${date}T12:00:00+07:00`));
 }
 
 export function PricingEditor({
@@ -43,14 +56,27 @@ export function PricingEditor({
   onSave,
   onConfirmOverwrite,
   onDelete,
+  isDrawer = false,
+  onClose,
 }: PricingEditorProps) {
   const disabled = !selectedRange || isSaving;
 
   return (
-    <aside aria-label="ตั้งค่าราคาพิเศษ" className="pricing-editor">
+    <aside
+      aria-label="ตั้งค่าราคาพิเศษ"
+      aria-modal={isDrawer || undefined}
+      className="pricing-editor"
+      id={isDrawer ? "mobile-pricing-drawer" : undefined}
+      role={isDrawer ? "dialog" : undefined}
+    >
       <div className="pricing-editor__heading">
-        <p className="eyebrow">CELL INSPECTOR</p>
-        <h2>ตั้งค่าราคาพิเศษ</h2>
+        <div>
+          <p className="eyebrow">CELL INSPECTOR</p>
+          <h2>ตั้งค่าราคาพิเศษ</h2>
+        </div>
+        {isDrawer && onClose ? (
+          <button aria-label="ปิดการตั้งค่าราคา" autoFocus className="drawer-close" onClick={onClose} type="button">×</button>
+        ) : null}
         <p className="pricing-editor__range">{selectionLabel(selectedRange)}</p>
       </div>
 
@@ -77,6 +103,9 @@ export function PricingEditor({
         <div className="overwrite-notice" role="status">
           <strong>พบราคาพิเศษ {conflicts.length} วันในช่วงที่เลือก</strong>
           <span>ยืนยันเพื่อแทนที่สถานะเดิมของทุกวันในช่วงนี้</span>
+          <ul aria-label="วันที่มีราคาพิเศษเดิม" className="overwrite-notice__dates">
+            {conflicts.map((date) => <li key={date}>{formatConflictDate(date)}</li>)}
+          </ul>
           <button disabled={isSaving} onClick={onConfirmOverwrite} type="button">ยืนยันการทับราคา</button>
         </div>
       ) : null}

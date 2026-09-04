@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { checkConflicts, deleteDailyPriceRange, getDailyPrices, getProperties, PricingApiError, updateDailyPriceRange } from "@/components/pricing/api-client";
 import { CalendarDayCell } from "@/components/pricing/calendar-day-cell";
@@ -13,6 +13,21 @@ type PricingCalendarProps = { initialMonth?: string };
 
 const thaiMonthFormatter = new Intl.DateTimeFormat("th-TH", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" });
 const thaiDayFormatter = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bangkok" });
+const mobileMediaQuery = "(max-width: 1023px)";
+
+function subscribeToMobileViewport(callback: () => void): () => void {
+  const mediaQuery = window.matchMedia(mobileMediaQuery);
+  mediaQuery.addEventListener("change", callback);
+  return () => mediaQuery.removeEventListener("change", callback);
+}
+
+function getMobileViewportSnapshot(): boolean {
+  return window.matchMedia(mobileMediaQuery).matches;
+}
+
+function getServerViewportSnapshot(): boolean {
+  return false;
+}
 
 function todayMonth(): string {
   const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", timeZone: "Asia/Bangkok" }).formatToParts(new Date());
@@ -60,6 +75,11 @@ function toRange(startDate: string, endDate: string): DateRange {
 }
 
 export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendarProps) {
+  const isMobileViewport = useSyncExternalStore(
+    subscribeToMobileViewport,
+    getMobileViewportSnapshot,
+    getServerViewportSnapshot
+  );
   const [month, setMonth] = useState(initialMonth);
   const [activeProperty, setActiveProperty] = useState<Property | null>(null);
   const [dailyPrices, setDailyPrices] = useState<DailyPrice[]>([]);
@@ -71,6 +91,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   const [isSaving, setIsSaving] = useState(false);
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [isMobileEditorOpen, setIsMobileEditorOpen] = useState(false);
   const visibleRange = useMemo(() => monthRange(month), [month]);
   const visibleDays = useMemo(() => datesForMonth(month), [month]);
   const dailyPriceByDate = useMemo(() => new Map(dailyPrices.map((dailyPrice) => [dailyPrice.date, dailyPrice])), [dailyPrices]);
@@ -103,9 +124,19 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     return () => { mounted = false; };
   }, [activeProperty, visibleRange]);
 
+  useEffect(() => {
+    if (!isMobileEditorOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMobileEditorOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isMobileEditorOpen]);
+
   function handleSelectDate(date: string): void {
     setMessage(null);
     setConflicts([]);
+    if (isMobileViewport) setIsMobileEditorOpen(true);
     if (!selectedRange || selectedRange.startDate !== selectedRange.endDate) {
       setSelectedRange({ startDate: date, endDate: date });
       return;
@@ -158,6 +189,22 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     }
   }
 
+  const editorProps = {
+    conflicts,
+    description,
+    isSaving,
+    message,
+    netPrice,
+    onConfirmOverwrite: () => void saveRange(true),
+    onDelete: () => void handleDelete(),
+    onDescriptionChange: setDescription,
+    onPriceChange: setNetPrice,
+    onSave: () => void saveRange(false),
+    onStatusChange: setStatusType,
+    selectedRange,
+    statusType,
+  };
+
   return (
     <div className="pricing-app-shell">
       <aside className="app-sidebar">
@@ -167,7 +214,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
       </aside>
       <div className="pricing-workspace">
         <header className="app-header">
-          <button aria-label="เปิดเมนู" className="mobile-menu" type="button">☰</button>
+          <button aria-controls="mobile-pricing-drawer" aria-expanded={isMobileViewport && isMobileEditorOpen} aria-label="เปิดการตั้งค่าราคา" className="mobile-menu" onClick={() => setIsMobileEditorOpen(true)} type="button">☰</button>
           <div><p className="eyebrow">PRICING MANAGEMENT</p><h1>ราคาพิเศษรายวัน</h1></div>
           <div className="app-header__property"><span className="app-header__property-dot" /><span>{activeProperty?.name ?? (isLoading ? "กำลังโหลด…" : "ยังไม่มีบ้านพัก")}</span></div>
         </header>
@@ -187,7 +234,14 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
               })}
             </div>
           </section>
-          <PricingEditor conflicts={conflicts} description={description} isSaving={isSaving} message={message} netPrice={netPrice} onConfirmOverwrite={() => void saveRange(true)} onDelete={() => void handleDelete()} onDescriptionChange={setDescription} onPriceChange={setNetPrice} onSave={() => void saveRange(false)} onStatusChange={setStatusType} selectedRange={selectedRange} statusType={statusType} />
+          {isMobileViewport ? (
+            <div className="mobile-drawer" hidden={!isMobileEditorOpen}>
+              <button aria-label="ปิดการตั้งค่าราคา" className="mobile-drawer__backdrop" onClick={() => setIsMobileEditorOpen(false)} type="button" />
+              <PricingEditor {...editorProps} isDrawer onClose={() => setIsMobileEditorOpen(false)} />
+            </div>
+          ) : (
+            <PricingEditor {...editorProps} />
+          )}
         </main>
       </div>
     </div>

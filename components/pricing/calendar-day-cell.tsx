@@ -1,4 +1,4 @@
-import type { DailyPrice } from "@/server/types/pricing";
+import type { DailyPrice, StatusType } from "@/server/types/pricing";
 
 type CalendarDayCellProps = {
   date: string;
@@ -8,6 +8,13 @@ type CalendarDayCellProps = {
   isSelected: boolean;
   isInRange: boolean;
   onSelect: (date: string) => void;
+};
+
+const statusLabels: Record<StatusType, string> = {
+  holiday: "วันหยุด",
+  promotion: "โปรโมชั่น",
+  hot_deal: "โปรไฟลุก",
+  holiday_hot_deal: "โปรไฟลุกในวันหยุด",
 };
 
 export function CalendarDayCell({
@@ -26,7 +33,7 @@ export function CalendarDayCell({
     : isInRange
       ? " pricing-day--in-range"
       : "";
-  const statusLabel = status ? `, ${status}` : "";
+  const statusLabel = status ? `, ${statusLabels[status]}` : "";
 
   return (
     <button
