@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { checkConflicts, deleteDailyPriceRange, getDailyPrices, getProperties, PricingApiError, updateDailyPriceRange } from "@/components/pricing/api-client";
 import { CalendarDayCell } from "@/components/pricing/calendar-day-cell";
@@ -27,6 +27,15 @@ function getMobileViewportSnapshot(): boolean {
 
 function getServerViewportSnapshot(): boolean {
   return false;
+}
+
+function getFocusableDrawerElements(drawer: HTMLDivElement | null): HTMLElement[] {
+  if (!drawer) return [];
+  return Array.from(
+    drawer.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((element) => !element.classList.contains("mobile-drawer__backdrop"));
 }
 
 function todayMonth(): string {
@@ -92,6 +101,8 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [isMobileEditorOpen, setIsMobileEditorOpen] = useState(false);
+  const drawerOpenerRef = useRef<HTMLElement | null>(null);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
   const visibleRange = useMemo(() => monthRange(month), [month]);
   const visibleDays = useMemo(() => datesForMonth(month), [month]);
   const dailyPriceByDate = useMemo(() => new Map(dailyPrices.map((dailyPrice) => [dailyPrice.date, dailyPrice])), [dailyPrices]);
@@ -124,19 +135,53 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     return () => { mounted = false; };
   }, [activeProperty, visibleRange]);
 
+  const closeMobileEditor = useCallback(() => {
+    setIsMobileEditorOpen(false);
+    drawerOpenerRef.current?.focus();
+  }, []);
+
+  const openMobileEditor = useCallback((opener?: HTMLElement | null) => {
+    if (!isMobileViewport) return;
+    drawerOpenerRef.current = opener ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    setIsMobileEditorOpen(true);
+  }, [isMobileViewport]);
+
   useEffect(() => {
     if (!isMobileEditorOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsMobileEditorOpen(false);
+    const focusableElements = getFocusableDrawerElements(drawerRef.current);
+    const firstFocusableElement = focusableElements[0];
+    firstFocusableElement?.focus();
+
+    const keepFocusInDrawer = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMobileEditor();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const elements = getFocusableDrawerElements(drawerRef.current);
+      if (elements.length === 0) return;
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey && (activeElement === first || !drawerRef.current?.contains(activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isMobileEditorOpen]);
+
+    window.addEventListener("keydown", keepFocusInDrawer);
+    return () => window.removeEventListener("keydown", keepFocusInDrawer);
+  }, [closeMobileEditor, isMobileEditorOpen]);
 
   function handleSelectDate(date: string): void {
     setMessage(null);
     setConflicts([]);
-    if (isMobileViewport) setIsMobileEditorOpen(true);
+    openMobileEditor();
     if (!selectedRange || selectedRange.startDate !== selectedRange.endDate) {
       setSelectedRange({ startDate: date, endDate: date });
       return;
@@ -214,7 +259,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
       </aside>
       <div className="pricing-workspace">
         <header className="app-header">
-          <button aria-controls="mobile-pricing-drawer" aria-expanded={isMobileViewport && isMobileEditorOpen} aria-label="เปิดการตั้งค่าราคา" className="mobile-menu" onClick={() => setIsMobileEditorOpen(true)} type="button">☰</button>
+          <button aria-controls="mobile-pricing-drawer" aria-expanded={isMobileViewport && isMobileEditorOpen} aria-label="เปิดการตั้งค่าราคา" className="mobile-menu" onClick={(event) => openMobileEditor(event.currentTarget)} type="button">☰</button>
           <div><p className="eyebrow">PRICING MANAGEMENT</p><h1>ราคาพิเศษรายวัน</h1></div>
           <div className="app-header__property"><span className="app-header__property-dot" /><span>{activeProperty?.name ?? (isLoading ? "กำลังโหลด…" : "ยังไม่มีบ้านพัก")}</span></div>
         </header>
@@ -235,9 +280,9 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
             </div>
           </section>
           {isMobileViewport ? (
-            <div className="mobile-drawer" hidden={!isMobileEditorOpen}>
-              <button aria-label="ปิดการตั้งค่าราคา" className="mobile-drawer__backdrop" onClick={() => setIsMobileEditorOpen(false)} type="button" />
-              <PricingEditor {...editorProps} isDrawer onClose={() => setIsMobileEditorOpen(false)} />
+            <div className="mobile-drawer" hidden={!isMobileEditorOpen} ref={drawerRef}>
+              <button aria-label="ปิดการตั้งค่าราคา" className="mobile-drawer__backdrop" onClick={closeMobileEditor} type="button" />
+              <PricingEditor {...editorProps} isDrawer onClose={closeMobileEditor} />
             </div>
           ) : (
             <PricingEditor {...editorProps} />

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -49,12 +49,18 @@ describe("PricingCalendar", () => {
     render(<PricingCalendar initialMonth="2026-04" />);
 
     await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
-    await user.click(screen.getByRole("button", { name: "เปิดการตั้งค่าราคา" }));
-    expect(await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" })).toBeTruthy();
+    const opener = screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" });
+    await user.click(opener);
+    const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
+    expect(drawer).toBeTruthy();
+    expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ปิดการตั้งค่าราคา" }));
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ลบสถานะในช่วงนี้" }));
     await user.keyboard("{Escape}");
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" })).toBeNull();
     });
+    expect(document.activeElement).toBe(opener);
   });
 
   test("checks conflicts before rendering the overwrite confirmation", async () => {
