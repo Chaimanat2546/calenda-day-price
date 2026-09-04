@@ -10,12 +10,19 @@ type QueryResult<T> = {
   error: { message: string } | null;
 };
 
-interface DailyPriceQuery {
+interface DailyPriceQuery extends PromiseLike<QueryResult<DailyPrice[]>> {
   eq(column: string, value: string): DailyPriceQuery;
   gte(column: string, value: string): DailyPriceQuery;
   lte(column: string, value: string): DailyPriceQuery;
   lt(column: string, value: string): DailyPriceQuery;
-  order(column: string, options?: { ascending?: boolean }): Promise<QueryResult<unknown[]>>;
+  order(column: string, options?: { ascending?: boolean }): DailyPriceQuery;
+}
+
+interface DailyPriceMutationQuery extends PromiseLike<QueryResult<DailyPrice[]>> {
+  eq(column: string, value: string): DailyPriceMutationQuery;
+  gte(column: string, value: string): DailyPriceMutationQuery;
+  lte(column: string, value: string): DailyPriceMutationQuery;
+  select(columns?: string): DailyPriceQuery;
 }
 
 export interface DailyPriceRepositoryClient {
@@ -25,9 +32,9 @@ export interface DailyPriceRepositoryClient {
       rows: DailyPriceWrite[],
       options: { onConflict: "property_id,date" }
     ): {
-      select(columns?: string): Promise<QueryResult<unknown[]>>;
+      select(columns?: string): DailyPriceQuery;
     };
-    delete(): DailyPriceQuery;
+    delete(): DailyPriceMutationQuery;
   };
 }
 
@@ -56,7 +63,7 @@ export async function getDailyPricesForMonth(
     .lt("date", nextMonth)
     .order("date");
 
-  return assertSuccess((await result) as unknown as QueryResult<DailyPrice[]>);
+  return assertSuccess(await result);
 }
 
 export async function getDailyPricesInRange(
@@ -73,7 +80,7 @@ export async function getDailyPricesInRange(
     .lte("date", endDate)
     .order("date");
 
-  return assertSuccess((await result) as unknown as QueryResult<DailyPrice[]>);
+  return assertSuccess(await result);
 }
 
 export async function findDailyPriceConflicts(
@@ -90,9 +97,7 @@ export async function findDailyPriceConflicts(
     .lte("date", endDate)
     .order("date");
 
-  return assertSuccess((await result) as unknown as QueryResult<{ date: string }[]>).map(
-    ({ date }) => date
-  );
+  return assertSuccess(await result).map(({ date }) => date);
 }
 
 export async function upsertDailyPrices(
@@ -100,10 +105,10 @@ export async function upsertDailyPrices(
   rows: DailyPriceWrite[]
 ): Promise<DailyPrice[]> {
   return assertSuccess(
-    (await client
+    await client
       .from("daily_price")
       .upsert(rows, { onConflict: "property_id,date" })
-      .select()) as QueryResult<DailyPrice[]>
+      .select()
   );
 }
 
@@ -118,9 +123,10 @@ export async function deleteDailyPricesInRange(
     .delete()
     .eq("property_id", propertyId)
     .gte("date", startDate)
-    .lte("date", endDate);
+    .lte("date", endDate)
+    .select();
 
-  return assertSuccess((await result) as unknown as QueryResult<DailyPrice[]>);
+  return assertSuccess(await result);
 }
 
 export function createDailyPriceWrite(

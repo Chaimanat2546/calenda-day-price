@@ -5,7 +5,9 @@ import { rangeInputSchema } from "@/lib/validation/daily-price";
 import {
   applyDailyPriceRange,
   checkDailyPriceConflicts,
+  deleteDailyPriceRange,
 } from "@/server/services/pricing-service";
+import type { DailyPriceRepositoryClient } from "@/server/repositories/daily-price-repository";
 import type { DailyPrice } from "@/server/types/pricing";
 
 const propertyId = "5f0cbf1d-5f78-4dca-a14c-d1fa66379070";
@@ -109,6 +111,20 @@ describe("pricing service", () => {
     ]);
     expect(result).toMatchObject({ status: "OK" });
   });
+
+  test("returns every row deleted from an inclusive date range", async () => {
+    const first = createDailyPrice("first", "2026-04-15");
+    const last = createDailyPrice("last", "2026-04-17");
+    const client = createClient([first, last]);
+
+    await expect(
+      deleteDailyPriceRange(client, {
+        propertyId,
+        startDate: "2026-04-15",
+        endDate: "2026-04-17",
+      })
+    ).resolves.toEqual([first, last]);
+  });
 });
 
 type PriceRow = Pick<
@@ -125,9 +141,20 @@ function createClient(existing: DailyPrice[] = []) {
     gte: () => query,
     lte: () => query,
     lt: () => query,
-    order: () => Promise.resolve({ data: selectedDates, error: null }),
+    order: () => query,
     then: (onfulfilled: (result: { data: { date: string }[]; error: null }) => unknown) =>
       Promise.resolve({ data: selectedDates, error: null }).then(onfulfilled),
+  };
+
+  const deleteQuery = {
+    eq: () => deleteQuery,
+    gte: () => deleteQuery,
+    lte: () => deleteQuery,
+    lt: () => deleteQuery,
+    order: () => deleteQuery,
+    select: () => Promise.resolve({ data: existing, error: null }),
+    then: (onfulfilled: (result: { data: null; error: null }) => unknown) =>
+      Promise.resolve({ data: null, error: null }).then(onfulfilled),
   };
 
   return {
@@ -140,7 +167,7 @@ function createClient(existing: DailyPrice[] = []) {
           select: () => Promise.resolve({ data: rows, error: null }),
         };
       },
-      delete: () => query,
+      delete: () => deleteQuery,
     }),
-  };
+  } as unknown as DailyPriceRepositoryClient & { writes: PriceRow[] };
 }
