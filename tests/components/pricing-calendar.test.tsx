@@ -53,6 +53,7 @@ describe("PricingCalendar", () => {
     await user.click(opener);
     const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
     expect(drawer).toBeTruthy();
+    expect(within(drawer).getByText("฿1,500", { exact: true })).toBeTruthy();
     expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ปิดการตั้งค่าราคา" }));
     await user.tab({ shift: true });
     expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ลบสถานะในช่วงนี้" }));
@@ -117,7 +118,9 @@ describe("PricingCalendar", () => {
       .mockResolvedValueOnce(jsonResponse({ data: [] }))
       .mockResolvedValueOnce(
         jsonResponse({ data: { dates: ["2026-04-16"] } })
-      );
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: [] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<PricingCalendar initialMonth="2026-04" />);
@@ -139,6 +142,53 @@ describe("PricingCalendar", () => {
     });
     expect(await screen.findByText("พบราคาพิเศษ 1 วันในช่วงที่เลือก")).toBeTruthy();
     expect(screen.getByText("16 เมษายน 2569")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "ยืนยันการทับราคา" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "ยืนยันการทับราคา" }));
+    await waitFor(() => {
+      const overwriteRequest = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).endsWith("/daily-prices/range") && init?.method === "PUT"
+      );
+      expect(overwriteRequest).toBeTruthy();
+      expect(JSON.parse(String(overwriteRequest?.[1]?.body))).toEqual({
+        startDate: "2026-04-15",
+        endDate: "2026-04-17",
+        statusType: "hot_deal",
+        netPrice: 2200,
+        description: null,
+        confirmOverwrite: true,
+      });
+    });
+  });
+
+  test("disables saving while a range update is pending to prevent duplicate submissions", async () => {
+    const user = userEvent.setup();
+    let resolveUpdate: (response: Response) => void = () => undefined;
+    const pendingUpdate = new Promise<Response>((resolve) => {
+      resolveUpdate = resolve;
+    });
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }))
+      .mockResolvedValueOnce(jsonResponse({ data: { dates: [] } }))
+      .mockReturnValueOnce(pendingUpdate)
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
+    await user.click(screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" }));
+    const saveButton = screen.getByRole("button", { name: "บันทึกราคาพิเศษ" });
+    await user.click(saveButton);
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(1);
+    });
+    expect(saveButton.hasAttribute("disabled")).toBe(true);
+    await user.click(saveButton);
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(1);
+
+    resolveUpdate(jsonResponse({ data: [] }));
+    expect(await screen.findByText("บันทึกราคาพิเศษแล้ว")).toBeTruthy();
   });
 });
