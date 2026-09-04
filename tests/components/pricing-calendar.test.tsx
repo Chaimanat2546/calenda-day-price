@@ -38,6 +38,38 @@ beforeEach(() => {
 });
 
 describe("PricingCalendar", () => {
+  test("shows the base price for a normal calendar day", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    const day = await screen.findByRole("button", {
+      name: /เลือกวันที่ 15 เมษายน 2569/,
+    });
+    expect(within(day).getByText("฿1,500", { exact: true })).toBeTruthy();
+  });
+
+  test("lists all pricing states in the legend", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
+    const legend = screen.getByLabelText("คำอธิบายสถานะ");
+    expect(within(legend).getByText("วันปกติ")).toBeTruthy();
+    expect(within(legend).getByText("วันหยุด")).toBeTruthy();
+    expect(within(legend).getByText("ราคาพิเศษ")).toBeTruthy();
+    expect(within(legend).getByText("โปรไฟลุก")).toBeTruthy();
+  });
+
   test("opens and closes the mobile pricing drawer with keyboard", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
@@ -246,8 +278,10 @@ describe("PricingCalendar", () => {
       expect(day.classList.contains("pricing-day--holiday")).toBe(true);
       expect(day.classList.contains("pricing-day--hot-deal")).toBe(true);
     });
-    expect(within(day).getByRole("img", { name: "Hot Deal" })).toBeTruthy();
+    expect(within(day).getByRole("img", { name: "โปรไฟลุก" })).toBeTruthy();
     expect(within(day).getByText("฿1,200")).toBeTruthy();
+    expect(within(day).getByText("฿1,500", { exact: true })).toBeTruthy();
+    expect(day.getAttribute("aria-label")).toContain("วันหยุด");
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/properties/${property.id}/calendar-prices?from=2026-04-01&to=2026-04-30`,
       undefined
@@ -282,7 +316,7 @@ describe("PricingCalendar", () => {
       expect(day.classList.contains("pricing-day--hot-deal")).toBe(true);
     });
     expect(within(day).getByRole("img", { name: "โปรโมชั่น" })).toBeTruthy();
-    expect(within(day).getByRole("img", { name: "Hot Deal" })).toBeTruthy();
+    expect(within(day).getByRole("img", { name: "โปรไฟลุก" })).toBeTruthy();
   });
 
   test("disables saving while a range update is pending to prevent duplicate submissions", async () => {

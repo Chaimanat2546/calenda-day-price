@@ -1,7 +1,8 @@
 const statuses = [
+  { type: "normal", label: "วันปกติ", mark: "" },
   { type: "holiday", label: "วันหยุด", mark: "" },
-  { type: "promotion", label: "โปรโมชั่น", mark: "✦" },
-  { type: "hot-deal", label: "Hot Deal", mark: "🔥" },
+  { type: "promotion", label: "ราคาพิเศษ", mark: "✦" },
+  { type: "hot-deal", label: "โปรไฟลุก", mark: "🔥" },
 ] as const;
 
 export function StatusLegend() {

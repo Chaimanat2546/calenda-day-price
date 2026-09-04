@@ -1,4 +1,5 @@
 import type { CalendarDayPrice, StatusType } from "@/server/types/pricing";
+import { BASE_DAILY_PRICE } from "@/server/types/pricing";
 
 type CalendarDayCellProps = {
   date: string;
@@ -27,12 +28,14 @@ export function CalendarDayCell({
   const status = calendarPrice?.status_type;
   const baseModifier = status ? ` pricing-day--${status}` : "";
   const hotDealModifier = calendarPrice?.is_hot_deal ? " pricing-day--hot-deal" : "";
+  const hasSpecialPrice = Boolean(status || calendarPrice?.is_hot_deal);
   const selection = isSelected
     ? " pricing-day--selected"
     : isInRange
       ? " pricing-day--in-range"
       : "";
-  const statusLabel = `${status ? `, ${statusLabels[status]}` : ""}${calendarPrice?.is_hot_deal ? ", Hot Deal" : ""}`;
+  const statusLabel = `${status ? `, ${statusLabels[status]}` : ""}${calendarPrice?.is_hot_deal ? ", โปรไฟลุก" : ""}`;
+  const activePrice = hasSpecialPrice ? calendarPrice?.net_price : BASE_DAILY_PRICE;
 
   return (
     <button
@@ -47,9 +50,10 @@ export function CalendarDayCell({
         <span aria-label="โปรโมชั่น" className="pricing-day__mark pricing-day__mark--tag" role="img">✦</span>
       ) : null}
       {calendarPrice?.is_hot_deal ? (
-        <span aria-label="Hot Deal" className="pricing-day__mark" role="img">🔥</span>
+        <span aria-label="โปรไฟลุก" className="pricing-day__mark" role="img">🔥</span>
       ) : null}
-      {calendarPrice ? <span className="pricing-day__price">฿{calendarPrice.net_price.toLocaleString("th-TH")}</span> : null}
+      <span className="pricing-day__price">฿{activePrice?.toLocaleString("th-TH")}</span>
+      {hasSpecialPrice ? <span className="pricing-day__base-price">฿{BASE_DAILY_PRICE.toLocaleString("th-TH")}</span> : null}
     </button>
   );
 }
