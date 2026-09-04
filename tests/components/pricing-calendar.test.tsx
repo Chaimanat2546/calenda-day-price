@@ -366,7 +366,7 @@ describe("PricingCalendar", () => {
     });
     expect(within(day).getByRole("img", { name: "โปรไฟลุก" })).toBeTruthy();
     expect(within(day).getByText("฿1,200")).toBeTruthy();
-    expect(within(day).getByText("฿1,500", { exact: true })).toBeTruthy();
+    expect(within(day).queryByText("฿1,500", { exact: true })).toBeNull();
     expect(day.getAttribute("aria-label")).toContain("วันหยุด");
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/properties/${property.id}/calendar-prices?from=2026-04-01&to=2026-04-30`,
@@ -398,6 +398,10 @@ describe("PricingCalendar", () => {
     const day = await screen.findByRole("button", {
       name: /เลือกวันที่ 15 เมษายน 2569/,
     });
+    await waitFor(() => {
+      expect(day.classList.contains("pricing-day--holiday")).toBe(true);
+    });
+    expect(within(day).queryByText("฿1,500", { exact: true })).toBeNull();
     await user.click(day);
 
     const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });

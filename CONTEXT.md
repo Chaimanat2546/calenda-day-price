@@ -84,7 +84,7 @@ DELETE /api/properties/:propertyId/hot-deals?from=&to=
 - หน้าหลักคือ calendar รายเดือน พร้อม Cell Inspector บน desktop และ bottom sheet บน mobile โดยไม่มีการสร้างหน้าใหม่
 - Cell Inspector มีตัวเลือกโหมด `ราคาพิเศษ` และ `🔥 Hot Deal`: โหมดราคาพิเศษตั้งได้เฉพาะ Holiday หรือ Promotion ส่วนโหมด Hot Deal ตั้งราคา, จำนวนวันแสดงล่วงหน้า และหมายเหตุแยกกัน
 - เลือกวันหนึ่งครั้งเพื่อเริ่มช่วง แล้วเลือกวันถัดไปเพื่อขยายช่วง
-- ปฏิทินจัดลำดับ visual ของสถานะดังนี้: `Holiday + Hot Deal` คงพื้นเหลืองและเพิ่ม `🔥`; `Promotion + Hot Deal` แสดงเป็น Hot Deal เท่านั้นโดยซ่อนพื้น/สัญลักษณ์ Promotion; Hot Deal ใช้ราคา Hot Deal เสมอ
+- ปฏิทินจัดลำดับ visual ของสถานะดังนี้: `Holiday + Hot Deal` คงพื้นเหลืองและเพิ่ม `🔥`; `Promotion + Hot Deal` แสดงเป็น Hot Deal เท่านั้นโดยซ่อนพื้น/สัญลักษณ์ Promotion; Hot Deal ใช้ราคา Hot Deal เสมอ. ทุก Holiday ซ่อนราคาอ้างอิง ฿1,500 ใน cell
 - UI ต้องยึด layout และ design system จาก Stitch project `Calendar Pricing Day Cell` เป็น reference ไม่ออกแบบ visual system ใหม่เอง
 - การบันทึกซ้ำถูกป้องกันด้วย loading state; การลบถามยืนยันก่อนเสมอ
 

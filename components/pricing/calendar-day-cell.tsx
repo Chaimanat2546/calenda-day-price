@@ -44,6 +44,7 @@ export function CalendarDayCell({
       : "";
   const statusLabel = `${visibleStatus ? `, ${statusLabels[visibleStatus]}` : ""}${isHotDeal ? ", โปรไฟลุก" : ""}`;
   const activePrice = hasSpecialPrice ? calendarPrice?.net_price ?? BASE_DAILY_PRICE : BASE_DAILY_PRICE;
+  const showBasePrice = hasSpecialPrice && visibleStatus !== "holiday";
 
   return (
     <button
@@ -62,7 +63,7 @@ export function CalendarDayCell({
       ) : null}
       <span aria-hidden="true" className="pricing-day__price pricing-day__price--mobile">{formatCompactPrice(activePrice)}</span>
       <span className="pricing-day__price pricing-day__price--desktop">฿{activePrice.toLocaleString("th-TH")}</span>
-      {hasSpecialPrice ? <span className="pricing-day__base-price">฿{BASE_DAILY_PRICE.toLocaleString("th-TH")}</span> : null}
+      {showBasePrice ? <span className="pricing-day__base-price">฿{BASE_DAILY_PRICE.toLocaleString("th-TH")}</span> : null}
     </button>
   );
 }
