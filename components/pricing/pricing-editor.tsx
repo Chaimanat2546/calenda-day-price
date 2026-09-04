@@ -1,6 +1,6 @@
 import type { Ref } from "react";
 
-import type { StatusType } from "@/server/types/pricing";
+import type { CalendarDayPrice, StatusType } from "@/server/types/pricing";
 
 export type PricingMode = "daily-price" | "hot-deal";
 
@@ -27,12 +27,21 @@ type PricingEditorProps = {
   onReturnToCalendar?: () => void;
   inspectorRef?: Ref<HTMLElement>;
   propertyName?: string;
+  selectedCalendarPrice?: CalendarDayPrice;
 };
 
 const statusOptions: Array<{ value: StatusType; label: string }> = [
   { value: "promotion", label: "✦ โปรโมชั่น" },
   { value: "holiday", label: "วันหยุด" },
 ];
+
+function calendarPriceStatusLabel(calendarPrice: CalendarDayPrice): string {
+  const labels: string[] = [];
+  const statusLabel = statusOptions.find((option) => option.value === calendarPrice.status_type)?.label;
+  if (statusLabel) labels.push(statusLabel);
+  if (calendarPrice.is_hot_deal) labels.push("โปรไฟลุก");
+  return labels.join(" · ") || "ราคาพิเศษ";
+}
 
 function selectionLabel(range: PricingEditorProps["selectedRange"]): string {
   if (!range) return "เลือกวันในปฏิทิน";
@@ -89,10 +98,15 @@ export function PricingEditor({
   onReturnToCalendar,
   inspectorRef,
   propertyName,
+  selectedCalendarPrice,
 }: PricingEditorProps) {
   const disabled = !selectedRange || isSaving;
   const isHotDeal = mode === "hot-deal";
-  const selectionStatus = isHotDeal ? "โปรไฟลุก" : statusOptions.find((option) => option.value === statusType)?.label ?? "ราคาพิเศษ";
+  const selectionStatus = selectedCalendarPrice
+    ? calendarPriceStatusLabel(selectedCalendarPrice)
+    : isHotDeal
+      ? "โปรไฟลุก"
+      : statusOptions.find((option) => option.value === statusType)?.label ?? "ราคาพิเศษ";
   const drawerSelectionLabel = mobileSelectionLabel(selectedRange);
 
   function changePrice(delta: number): void {

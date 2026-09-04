@@ -325,6 +325,9 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     onShowBeforeDaysChange: setShowBeforeDays,
     onStatusChange: setStatusType,
     propertyName: activeProperty?.name,
+    selectedCalendarPrice: selectedRange
+      ? calendarPriceByDate.get(selectedRange.startDate)
+      : undefined,
     selectedRange,
     showBeforeDays,
     statusType,

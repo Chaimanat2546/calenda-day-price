@@ -374,6 +374,37 @@ describe("PricingCalendar", () => {
     );
   });
 
+  test("shows an existing holiday's true status in the inspector", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [
+            {
+              date: "2026-04-15",
+              status_type: "holiday",
+              net_price: 1200,
+              is_hot_deal: false,
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    const day = await screen.findByRole("button", {
+      name: /เลือกวันที่ 15 เมษายน 2569/,
+    });
+    await user.click(day);
+
+    const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
+    expect(drawer.querySelector(".pricing-editor__status-pill")?.textContent).toBe("วันหยุด");
+    expect(drawer.querySelector(".pricing-editor__status-pill")?.textContent).not.toContain("โปรโมชั่น");
+  });
+
   test("keeps the Hot Deal visual state inside a selected range", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
