@@ -1,3 +1,5 @@
+import type { Ref } from "react";
+
 import type { StatusType } from "@/server/types/pricing";
 
 export type PricingMode = "daily-price" | "hot-deal";
@@ -22,6 +24,7 @@ type PricingEditorProps = {
   onDelete: () => void;
   isDrawer?: boolean;
   onClose?: () => void;
+  inspectorRef?: Ref<HTMLElement>;
 };
 
 const statusOptions: Array<{ value: StatusType; label: string }> = [
@@ -66,9 +69,17 @@ export function PricingEditor({
   onDelete,
   isDrawer = false,
   onClose,
+  inspectorRef,
 }: PricingEditorProps) {
   const disabled = !selectedRange || isSaving;
   const isHotDeal = mode === "hot-deal";
+  const selectionStatus = isHotDeal ? "โปรไฟลุก" : statusOptions.find((option) => option.value === statusType)?.label ?? "ราคาพิเศษ";
+
+  function changePrice(delta: number): void {
+    const currentPrice = Number(netPrice);
+    const nextPrice = Math.max(1, (Number.isFinite(currentPrice) ? currentPrice : 0) + delta);
+    onPriceChange(String(nextPrice));
+  }
 
   return (
     <aside
@@ -76,7 +87,9 @@ export function PricingEditor({
       aria-modal={isDrawer || undefined}
       className="pricing-editor"
       id={isDrawer ? "mobile-pricing-drawer" : undefined}
+      ref={inspectorRef}
       role={isDrawer ? "dialog" : undefined}
+      tabIndex={isDrawer ? undefined : -1}
     >
       <div className="pricing-editor__heading">
         <div>
@@ -87,11 +100,12 @@ export function PricingEditor({
           <button aria-label="ปิดการตั้งค่าราคา" autoFocus className="drawer-close" onClick={onClose} type="button">×</button>
         ) : null}
         <p className="pricing-editor__range">{selectionLabel(selectedRange)}</p>
+        {selectedRange ? <span className="pricing-editor__status-pill">{selectionStatus}</span> : null}
       </div>
 
       <div aria-label="โหมดตั้งราคา" className="pricing-editor__mode-switcher" role="group">
         <button aria-pressed={!isHotDeal} disabled={isSaving} onClick={() => onModeChange("daily-price")} type="button">ราคาพิเศษ</button>
-        <button aria-pressed={isHotDeal} disabled={isSaving} onClick={() => onModeChange("hot-deal")} type="button">🔥 Hot Deal</button>
+        <button aria-pressed={isHotDeal} disabled={isSaving} onClick={() => onModeChange("hot-deal")} type="button">🔥 โปรไฟลุก</button>
       </div>
 
       <div className="pricing-editor__base-price"><span>ราคาปกติ</span><strong>฿1,500</strong></div>
@@ -102,6 +116,7 @@ export function PricingEditor({
             <label htmlFor="hot-deal-price">
               <span>ราคา Hot Deal</span>
               <div className="price-input"><span>฿</span><input aria-label="ราคา Hot Deal" disabled={disabled} id="hot-deal-price" inputMode="numeric" min="1" onChange={(event) => onPriceChange(event.target.value)} type="number" value={netPrice} /></div>
+              <div aria-label="ปรับราคา Hot Deal ครั้งละ 200 บาท" className="price-stepper"><button aria-label="-฿200" disabled={disabled} onClick={() => changePrice(-200)} type="button">− ฿200</button><button aria-label="+฿200" disabled={disabled} onClick={() => changePrice(200)} type="button">+ ฿200</button></div>
             </label>
             <label htmlFor="hot-deal-show-before-days">
               <span>เริ่มแสดงล่วงหน้า</span>
@@ -119,6 +134,7 @@ export function PricingEditor({
             <label htmlFor="pricing-net-price">
               <span>ราคาสุทธิ</span>
               <div className="price-input"><span>฿</span><input aria-label="ราคาสุทธิ" disabled={disabled} id="pricing-net-price" inputMode="numeric" min="1" onChange={(event) => onPriceChange(event.target.value)} type="number" value={netPrice} /></div>
+              <div aria-label="ปรับราคาครั้งละ 200 บาท" className="price-stepper"><button aria-label="-฿200" disabled={disabled} onClick={() => changePrice(-200)} type="button">− ฿200</button><button aria-label="+฿200" disabled={disabled} onClick={() => changePrice(200)} type="button">+ ฿200</button></div>
             </label>
           </>
         )}
@@ -142,7 +158,7 @@ export function PricingEditor({
 
       <div className="pricing-editor__actions">
         <button className="button button--primary" disabled={disabled} onClick={onSave} type="button">{isSaving ? "กำลังบันทึก…" : isHotDeal ? "บันทึก Hot Deal" : "บันทึกราคาพิเศษ"}</button>
-        <button className="button button--danger" disabled={disabled} onClick={onDelete} type="button">{isHotDeal ? "ลบ Hot Deal ในช่วงนี้" : "ลบสถานะในช่วงนี้"}</button>
+        <button className="button button--danger" disabled={disabled} onClick={onDelete} type="button">รีเซ็ตเป็นราคาปกติ</button>
       </div>
     </aside>
   );

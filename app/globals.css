@@ -135,7 +135,7 @@
   --muted-ink: #737b94;
   --canvas: #f5f6fb;
   --line: #e7e9f1;
-  --violet: #6658e8;
+  --violet: #4f46e5;
   --violet-soft: #eeecff;
   --sidebar: #20263d;
   --yellow: #fff0ab;
@@ -156,6 +156,8 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .eyebrow { color: #8b91a9; font-size: .62rem; font-weight: 800; letter-spacing: .13em; line-height: 1; margin: 0 0 7px; }
 .mobile-menu { align-items: center; background: #f2f3f8; border: 0; border-radius: 9px; color: var(--ink); display: inline-flex; font-size: 1.1rem; height: 38px; justify-content: center; width: 38px; }
 .app-header__property { align-items: center; color: #656d86; display: none; font-size: .86rem; font-weight: 650; gap: 8px; }
+.app-header__property small, .app-header__property span { display: block; }
+.app-header__property small { color: var(--muted-ink); font-size: .58rem; font-weight: 800; letter-spacing: .12em; margin-bottom: 3px; }
 .app-header__property-dot { background: #55b98b; border-radius: 999px; height: 8px; width: 8px; }
 
 .pricing-layout { display: grid; gap: 16px; margin: 0 auto; max-width: 1510px; padding: 16px; }
@@ -163,6 +165,9 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .calendar-card { overflow: hidden; padding: 18px 13px 12px; }
 .calendar-card__topline { align-items: center; display: flex; justify-content: space-between; margin: 0 7px 18px; }
 .calendar-card__topline h2 { font-size: 1.12rem; }
+.calendar-card__controls { align-items: center; display: flex; gap: 10px; }
+.bulk-pricing-trigger { align-items: center; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; color: #4338ca; display: inline-flex; font-size: .75rem; font-weight: 800; gap: 6px; min-height: 31px; padding: 0 10px; }
+.bulk-pricing-trigger:hover { background: #e0e7ff; }
 .month-controls { align-items: center; display: flex; gap: 4px; }
 .month-controls button { background: #fff; border: 1px solid var(--line); border-radius: 8px; color: #525b75; font-size: .82rem; font-weight: 750; height: 31px; min-width: 31px; padding: 0 9px; }
 .month-controls button:first-child, .month-controls button:last-child { font-size: 1.35rem; line-height: 1; padding-bottom: 3px; }
@@ -180,7 +185,7 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .calendar-grid__weekday { color: #9aa1b6; font-size: .64rem; font-weight: 800; padding: 4px 0 10px; text-align: center; }
 .calendar-grid__blank { border-top: 1px solid var(--line); min-height: 61px; }
 .pricing-day { align-items: flex-start; background: transparent; border: 0; border-radius: 9px; color: #49516b; display: flex; flex-direction: column; font-size: .72rem; font-weight: 700; gap: 2px; justify-content: flex-start; margin: 1px; min-height: 61px; padding: 7px 6px; position: relative; text-align: left; transition: background .16s, box-shadow .16s; }
-.pricing-day:focus-visible, .month-controls button:focus-visible, .button:focus-visible, .pricing-editor__mode-switcher button:focus-visible, .pricing-editor input:focus-visible, .pricing-editor select:focus-visible, .pricing-editor textarea:focus-visible { outline: 3px solid rgb(102 88 232 / .3); outline-offset: 2px; }
+.pricing-day:focus-visible, .month-controls button:focus-visible, .bulk-pricing-trigger:focus-visible, .button:focus-visible, .pricing-editor__mode-switcher button:focus-visible, .price-stepper button:focus-visible, .pricing-editor input:focus-visible, .pricing-editor select:focus-visible, .pricing-editor textarea:focus-visible { outline: 3px solid rgb(79 70 229 / .3); outline-offset: 2px; }
 .pricing-day:hover { background: #f5f4ff; }
 .pricing-day__number { line-height: 1; }
 .pricing-day__mark { align-items: center; color: #e95737; display: inline-flex; font-size: .7rem; height: 14px; justify-content: center; }
@@ -201,6 +206,7 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .pricing-editor__heading { align-items: flex-start; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; padding-bottom: 16px; }
 .pricing-editor__range { color: #717a94; font-size: .78rem; margin: 7px 0 0; overflow-wrap: anywhere; }
 .pricing-editor__heading .pricing-editor__range { flex-basis: 100%; }
+.pricing-editor__status-pill { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 999px; color: #047857; font-size: .67rem; font-weight: 800; margin-top: 10px; padding: 4px 8px; }
 .drawer-close { align-items: center; background: #f1f2f7; border: 0; border-radius: 50%; color: #4f5870; display: inline-flex; font-size: 1.35rem; height: 32px; justify-content: center; line-height: 1; margin-top: -2px; padding-bottom: 3px; width: 32px; }
 .pricing-editor__base-price { align-items: center; background: #f6f6fa; border-radius: 10px; color: #777f95; display: flex; font-size: .77rem; justify-content: space-between; margin: 17px 0; padding: 11px 12px; }
 .pricing-editor__base-price strong { color: var(--ink); font-size: .9rem; }
@@ -215,6 +221,9 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .price-input { position: relative; }
 .price-input > span { color: #9299ad; left: 11px; pointer-events: none; position: absolute; top: 10px; }
 .price-input input { padding-left: 28px; }
+.price-stepper { display: flex; gap: 7px; }
+.price-stepper button { background: #f8fafc; border: 1px solid #dbe1ea; border-radius: 8px; color: #475569; flex: 1; font-size: .73rem; font-weight: 800; min-height: 34px; }
+.price-stepper button:hover:not(:disabled) { background: #eef2ff; border-color: #a5b4fc; color: #4338ca; }
 .pricing-editor__actions { display: grid; gap: 8px; margin-top: 19px; }
 .button, .overwrite-notice button { border: 0; border-radius: 9px; font-size: .8rem; font-weight: 780; min-height: 41px; padding: 0 13px; transition: transform .14s, opacity .14s; }
 .button:not(:disabled):active, .overwrite-notice button:not(:disabled):active { transform: translateY(1px); }
@@ -243,20 +252,32 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 
 @media (min-width: 1024px) {
   .pricing-app-shell { display: grid; grid-template-columns: 235px minmax(0, 1fr); }
-  .app-sidebar { background: var(--sidebar); color: #bdc3d7; display: flex; flex-direction: column; min-height: 100vh; padding: 25px 15px 18px; }
+  .app-sidebar { background: #111827; color: #bdc3d7; display: flex; flex-direction: column; min-height: 100vh; padding: 25px 15px 18px; }
   .app-brand { align-items: center; color: #fff; display: flex; font-size: 1.02rem; font-weight: 800; gap: 10px; padding: 0 10px; text-decoration: none; }
-  .app-brand__mark { align-items: center; background: #7164ee; border-radius: 8px; display: flex; height: 28px; justify-content: center; width: 28px; }
+  .app-brand__mark { align-items: center; background: #4f46e5; border-radius: 8px; display: flex; height: 28px; justify-content: center; width: 28px; }
   .app-nav { display: grid; gap: 5px; margin-top: 46px; }
   .app-nav a { border-radius: 9px; color: #aeb5ca; font-size: .82rem; font-weight: 650; padding: 11px 12px; text-decoration: none; }
   .app-nav a:hover { background: rgb(255 255 255 / .06); color: #fff; }
-  .app-nav__active { background: #343c59; color: #fff !important; }
+  .app-nav__active { background: rgb(79 70 229 / .25); color: #fff !important; }
   .app-sidebar__footer { align-items: center; border-top: 1px solid rgb(255 255 255 / .08); display: flex; gap: 9px; margin-top: auto; padding: 18px 8px 0; }
   .app-sidebar__footer strong, .app-sidebar__footer small { display: block; }
   .app-sidebar__footer strong { color: #fff; font-size: .75rem; }.app-sidebar__footer small { color: #9098b1; font-size: .66rem; margin-top: 2px; }
   .avatar { align-items: center; background: #e0b455; border-radius: 50%; color: #473718; display: inline-flex; font-size: .75rem; font-weight: 800; height: 29px; justify-content: center; width: 29px; }
   .mobile-menu { display: none; }
-  .pricing-layout { grid-template-columns: minmax(0, 1fr) 330px; padding: 30px; }
-  .pricing-editor { position: sticky; top: 20px; }
+  .pricing-layout { grid-template-columns: minmax(0, 1fr) 350px; padding: 30px; }
+  .calendar-card { border-color: #e2e8f0; box-shadow: 0 16px 34px rgb(15 23 42 / .06); }
+  .calendar-card__topline { margin-bottom: 22px; }
+  .bulk-pricing-trigger { background: #4f46e5; border-color: #4f46e5; color: #fff; min-height: 36px; padding: 0 13px; }
+  .bulk-pricing-trigger:hover { background: #4338ca; }
+  .month-controls button:hover { border-color: #4f46e5; color: #4f46e5; }
+  .pricing-editor { border-color: #e2e8f0; box-shadow: 0 16px 34px rgb(15 23 42 / .06); position: sticky; top: 20px; }
+  .pricing-editor__mode-switcher { background: #f1f5f9; }
+  .pricing-editor__mode-switcher button[aria-pressed="true"] { color: #4f46e5; }
+  .pricing-editor__base-price { background: #f8fafc; }
+  .pricing-editor__status-pill { background: #ecfdf5; border-color: #a7f3d0; color: #059669; }
+  .price-stepper button { min-height: 38px; }
+  .button--primary, .overwrite-notice button { background: #4f46e5; }
+  .button--danger { background: #fff1f2; color: #be123c; }
   .mobile-drawer { display: none; }
   .pricing-day, .calendar-grid__blank { min-height: 102px; }
   .pricing-day { padding: 12px; }

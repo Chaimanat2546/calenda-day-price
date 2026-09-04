@@ -120,6 +120,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   const [isMobileEditorOpen, setIsMobileEditorOpen] = useState(false);
   const drawerOpenerRef = useRef<HTMLElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
+  const desktopInspectorRef = useRef<HTMLElement | null>(null);
   const visibleRange = useMemo(() => monthRange(month), [month]);
   const visibleDays = useMemo(() => datesForMonth(month), [month]);
   const calendarPriceByDate = useMemo(
@@ -207,6 +208,16 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
       return;
     }
     setSelectedRange(toRange(selectedRange.startDate, date));
+  }
+
+  function handleOpenBulkPricing(opener?: HTMLElement | null): void {
+    setSelectedRange(null);
+    setMessage(null);
+    setConflictsByMode({ "daily-price": [], "hot-deal": [] });
+    openMobileEditor(opener);
+    if (!isMobileViewport) {
+      requestAnimationFrame(() => desktopInspectorRef.current?.focus());
+    }
   }
 
   async function saveRange(confirmOverwrite: boolean): Promise<void> {
@@ -313,7 +324,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   return (
     <div className="pricing-app-shell">
       <aside className="app-sidebar">
-        <a className="app-brand" href="#calendar"><span className="app-brand__mark">P</span><span>Primo Stay</span></a>
+        <a className="app-brand" href="#calendar"><span className="app-brand__mark">V</span><span>VillaRate Studio</span></a>
         <nav aria-label="เมนูหลัก" className="app-nav"><a href="#calendar">▦ ภาพรวม</a><a className="app-nav__active" href="#calendar">▣ ราคาและปฏิทิน</a><a href="#calendar">⌂ บ้านพัก</a></nav>
         <div className="app-sidebar__footer"><span className="avatar">ภ</span><div><strong>ภู</strong><small>ผู้ดูแลระบบ</small></div></div>
       </aside>
@@ -321,13 +332,19 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
         <header className="app-header">
           <button aria-controls="mobile-pricing-drawer" aria-expanded={isMobileViewport && isMobileEditorOpen} aria-label="เปิดการตั้งค่าราคา" className="mobile-menu" onClick={(event) => openMobileEditor(event.currentTarget)} type="button">☰</button>
           <div><p className="eyebrow">PRICING MANAGEMENT</p><h1>ราคาพิเศษรายวัน</h1></div>
-          <div className="app-header__property"><span className="app-header__property-dot" /><span>{activeProperty?.name ?? (isLoading ? "กำลังโหลด…" : "ยังไม่มีบ้านพัก")}</span></div>
+          <div className="app-header__property">
+            <span className="app-header__property-dot" />
+            <div><small>ACTIVE VILLA</small><span>{activeProperty?.name ?? (isLoading ? "กำลังโหลด…" : "ยังไม่มีบ้านพัก")}</span></div>
+          </div>
         </header>
         <main className="pricing-layout" id="calendar">
           <section aria-labelledby="calendar-heading" className="calendar-card">
             <div className="calendar-card__topline">
               <div><p className="eyebrow">DAILY RATE CALENDAR</p><h2 id="calendar-heading">{thaiMonthFormatter.format(dateForDisplay(`${month}-01`))}</h2></div>
-              <div className="month-controls"><button aria-label="เดือนก่อนหน้า" onClick={() => setMonth(shiftMonth(month, -1))} type="button">‹</button><button onClick={() => setMonth(todayMonth())} type="button">วันนี้</button><button aria-label="เดือนถัดไป" onClick={() => setMonth(shiftMonth(month, 1))} type="button">›</button></div>
+              <div className="calendar-card__controls">
+                <button className="bulk-pricing-trigger" onClick={(event) => handleOpenBulkPricing(event.currentTarget)} type="button"><span aria-hidden="true">⌘</span> Bulk Pricing</button>
+                <div className="month-controls"><button aria-label="เดือนก่อนหน้า" onClick={() => setMonth(shiftMonth(month, -1))} type="button">‹</button><button onClick={() => setMonth(todayMonth())} type="button">วันนี้</button><button aria-label="เดือนถัดไป" onClick={() => setMonth(shiftMonth(month, 1))} type="button">›</button></div>
+              </div>
             </div>
             <StatusLegend />
             <div aria-busy={isLoading} className="calendar-grid" role="grid">
@@ -345,7 +362,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
               <PricingEditor {...editorProps} isDrawer onClose={closeMobileEditor} />
             </div>
           ) : (
-            <PricingEditor {...editorProps} />
+            <PricingEditor {...editorProps} inspectorRef={desktopInspectorRef} />
           )}
         </main>
       </div>

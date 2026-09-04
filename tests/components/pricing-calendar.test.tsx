@@ -38,6 +38,40 @@ beforeEach(() => {
 });
 
 describe("PricingCalendar", () => {
+  test("shows the Stitch desktop inspector controls and resets the active range from Bulk Pricing", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation(() => ({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }))
+    );
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
+    expect(screen.getByRole("button", { name: "Bulk Pricing" })).toBeTruthy();
+    expect(screen.getByText("CELL INSPECTOR")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "-฿200" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "+฿200" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" }));
+    expect(screen.getByRole("button", { name: "บันทึกราคาพิเศษ" }).hasAttribute("disabled")).toBe(false);
+    await user.click(screen.getByRole("button", { name: "+฿200" }));
+    expect((screen.getByLabelText("ราคาสุทธิ") as HTMLInputElement).value).toBe("1700");
+    await user.click(screen.getByRole("button", { name: "-฿200" }));
+    expect((screen.getByLabelText("ราคาสุทธิ") as HTMLInputElement).value).toBe("1500");
+    await user.click(screen.getByRole("button", { name: "Bulk Pricing" }));
+    expect(screen.getByRole("button", { name: "บันทึกราคาพิเศษ" }).hasAttribute("disabled")).toBe(true);
+  });
+
   test("shows the base price for a normal calendar day", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -88,7 +122,7 @@ describe("PricingCalendar", () => {
     expect(within(drawer).getByText("฿1,500", { exact: true })).toBeTruthy();
     expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ปิดการตั้งค่าราคา" }));
     await user.tab({ shift: true });
-    expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ลบสถานะในช่วงนี้" }));
+    expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "รีเซ็ตเป็นราคาปกติ" }));
     await user.tab();
     expect(document.activeElement).toBe(within(drawer).getByRole("button", { name: "ปิดการตั้งค่าราคา" }));
     await user.keyboard("{Escape}");
@@ -214,7 +248,7 @@ describe("PricingCalendar", () => {
 
     await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
     await user.click(screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" }));
-    await user.click(screen.getByRole("button", { name: "🔥 Hot Deal" }));
+    await user.click(screen.getByRole("button", { name: "🔥 โปรไฟลุก" }));
     await user.clear(screen.getByLabelText("ราคา Hot Deal"));
     await user.type(screen.getByLabelText("ราคา Hot Deal"), "1200");
     await user.clear(screen.getByLabelText("เริ่มแสดงล่วงหน้า"));
