@@ -128,6 +128,12 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     () => new Map(calendarPrices.map((calendarPrice) => [calendarPrice.date, calendarPrice])),
     [calendarPrices]
   );
+  const selectedCalendarPrice = selectedRange
+    ? calendarPriceByDate.get(selectedRange.startDate)
+    : undefined;
+  const selectedCalendarPriceWithStatus = selectedCalendarPrice?.status_type || selectedCalendarPrice?.is_hot_deal
+    ? selectedCalendarPrice
+    : undefined;
 
   useEffect(() => {
     let mounted = true;
@@ -325,9 +331,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     onShowBeforeDaysChange: setShowBeforeDays,
     onStatusChange: setStatusType,
     propertyName: activeProperty?.name,
-    selectedCalendarPrice: selectedRange
-      ? calendarPriceByDate.get(selectedRange.startDate)
-      : undefined,
+    selectedCalendarPrice: selectedCalendarPriceWithStatus,
     selectedRange,
     showBeforeDays,
     statusType,

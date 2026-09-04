@@ -405,6 +405,37 @@ describe("PricingCalendar", () => {
     expect(drawer.querySelector(".pricing-editor__status-pill")?.textContent).not.toContain("โปรโมชั่น");
   });
 
+  test("uses the selected Hot Deal mode for a persisted normal-day record", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [
+            {
+              date: "2026-04-15",
+              status_type: null,
+              net_price: 1500,
+              is_hot_deal: false,
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    const day = await screen.findByRole("button", {
+      name: /เลือกวันที่ 15 เมษายน 2569/,
+    });
+    await user.click(day);
+
+    const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
+    await user.click(within(drawer).getByRole("button", { name: "🔥 โปรไฟลุก" }));
+    expect(drawer.querySelector(".pricing-editor__status-pill")?.textContent).toBe("โปรไฟลุก");
+  });
+
   test("keeps the Hot Deal visual state inside a selected range", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
