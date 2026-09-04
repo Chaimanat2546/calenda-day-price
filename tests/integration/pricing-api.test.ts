@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const propertyId = "5f0cbf1d-5f78-4dca-a14c-d1fa66379070";
 const property = {
@@ -29,20 +29,33 @@ vi.mock("@/server/repositories/property-repository", () => ({
 vi.mock("@/server/repositories/daily-price-repository", () => ({
   getDailyPricesInRange: vi.fn(),
 }));
+vi.mock("@/server/repositories/hot-deal-repository", () => ({
+  getHotDealsInRange: vi.fn(),
+}));
 vi.mock("@/server/services/pricing-service", () => ({
   applyDailyPriceRange: vi.fn(),
   checkDailyPriceConflicts: vi.fn(),
   deleteDailyPriceRange: vi.fn(),
 }));
+vi.mock("@/server/services/hot-deal-service", () => ({
+  applyHotDealRange: vi.fn(),
+  checkHotDealConflicts: vi.fn(),
+  deleteHotDealRange: vi.fn(),
+}));
 
 import { GET as getProperties } from "@/app/api/properties/route";
+import { GET as getCalendarPrices } from "@/app/api/properties/[propertyId]/calendar-prices/route";
 import {
   DELETE as deleteRange,
   GET as getDailyPrices,
 } from "@/app/api/properties/[propertyId]/daily-prices/route";
 import { POST as checkConflicts } from "@/app/api/properties/[propertyId]/daily-prices/conflicts/route";
 import { PUT as updateRange } from "@/app/api/properties/[propertyId]/daily-prices/range/route";
+import { DELETE as deleteHotDealRange } from "@/app/api/properties/[propertyId]/hot-deals/route";
+import { POST as checkHotDealConflicts } from "@/app/api/properties/[propertyId]/hot-deals/conflicts/route";
+import { PUT as updateHotDealRange } from "@/app/api/properties/[propertyId]/hot-deals/range/route";
 import { getDailyPricesInRange } from "@/server/repositories/daily-price-repository";
+import { getHotDealsInRange } from "@/server/repositories/hot-deal-repository";
 import {
   getProperties as getPropertiesFromRepository,
   getPropertyById,
@@ -52,12 +65,21 @@ import {
   checkDailyPriceConflicts,
   deleteDailyPriceRange,
 } from "@/server/services/pricing-service";
+import {
+  applyHotDealRange,
+  checkHotDealConflicts as checkHotDealConflictsFromService,
+  deleteHotDealRange as deleteHotDealRangeFromService,
+} from "@/server/services/hot-deal-service";
 
 const context = (id = propertyId) => ({ params: Promise.resolve({ propertyId: id }) });
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getPropertyById).mockResolvedValue(property);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("pricing REST API", () => {
@@ -196,5 +218,191 @@ describe("pricing REST API", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ data: { deleted: 1 } });
+  });
+
+  test("builds calendar display data from daily prices and active hot deals", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-01T00:00:00.000Z"));
+    vi.mocked(getDailyPricesInRange).mockResolvedValue([dailyPrice]);
+    vi.mocked(getHotDealsInRange).mockResolvedValue([
+      {
+        id: "8f0cbf1d-5f78-4dca-a14c-d1fa66379070",
+        property_id: propertyId,
+        date: "2026-04-15",
+        net_price: 1200,
+        show_before_days: 365,
+        description: "ดีลร้อน",
+        created_at: "2026-04-01T00:00:00.000Z",
+        updated_at: "2026-04-01T00:00:00.000Z",
+      },
+    ]);
+
+    const response = await getCalendarPrices(
+      new Request(
+        `http://localhost/api/properties/${propertyId}/calendar-prices?from=2026-04-15&to=2026-04-15`
+      ),
+      context()
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: [
+        {
+          date: "2026-04-15",
+          status_type: "promotion",
+          net_price: 1200,
+          is_hot_deal: true,
+        },
+      ],
+    });
+  });
+
+  test("checks hot deal conflicts without changing deals", async () => {
+    vi.mocked(checkHotDealConflictsFromService).mockResolvedValue({
+      dates: ["2026-04-16"],
+    });
+
+    const response = await checkHotDealConflicts(
+      new Request(
+        `http://localhost/api/properties/${propertyId}/hot-deals/conflicts`,
+        {
+          method: "POST",
+          body: JSON.stringify({ startDate: "2026-04-15", endDate: "2026-04-17" }),
+        }
+      ),
+      context()
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: { dates: ["2026-04-16"] },
+    });
+  });
+
+  test("overwrites a hot deal range after explicit confirmation", async () => {
+    const hotDeal = {
+      id: "8f0cbf1d-5f78-4dca-a14c-d1fa66379070",
+      property_id: propertyId,
+      date: "2026-04-15",
+      net_price: 1200,
+      show_before_days: 7,
+      description: "ดีลร้อน",
+      created_at: "2026-04-01T00:00:00.000Z",
+      updated_at: "2026-04-01T00:00:00.000Z",
+    };
+    vi.mocked(applyHotDealRange).mockResolvedValue({ status: "OK", data: [hotDeal] });
+
+    const response = await updateHotDealRange(
+      new Request(`http://localhost/api/properties/${propertyId}/hot-deals/range`, {
+        method: "PUT",
+        body: JSON.stringify({
+          startDate: "2026-04-15",
+          endDate: "2026-04-15",
+          netPrice: 1200,
+          showBeforeDays: 7,
+          description: "ดีลร้อน",
+          confirmOverwrite: true,
+        }),
+      }),
+      context()
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: [hotDeal] });
+    expect(applyHotDealRange).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ confirmed: true })
+    );
+  });
+
+  test("returns hot deal conflict dates when overwrite is not confirmed", async () => {
+    vi.mocked(applyHotDealRange).mockResolvedValue({
+      status: "CONFLICT",
+      dates: ["2026-04-16"],
+    });
+
+    const response = await updateHotDealRange(
+      new Request(`http://localhost/api/properties/${propertyId}/hot-deals/range`, {
+        method: "PUT",
+        body: JSON.stringify({
+          startDate: "2026-04-15",
+          endDate: "2026-04-17",
+          netPrice: 1200,
+          showBeforeDays: 7,
+        }),
+      }),
+      context()
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "CONFLICT",
+        message: "มีข้อมูลราคาพิเศษในช่วงวันที่เลือกอยู่แล้ว",
+        details: { dates: ["2026-04-16"] },
+      },
+    });
+  });
+
+  test("deletes hot deals and returns the deleted count", async () => {
+    vi.mocked(deleteHotDealRangeFromService).mockResolvedValue([
+      {
+        id: "8f0cbf1d-5f78-4dca-a14c-d1fa66379070",
+        property_id: propertyId,
+        date: "2026-04-15",
+        net_price: 1200,
+        show_before_days: 7,
+        description: null,
+        created_at: "2026-04-01T00:00:00.000Z",
+        updated_at: "2026-04-01T00:00:00.000Z",
+      },
+    ]);
+
+    const response = await deleteHotDealRange(
+      new Request(
+        `http://localhost/api/properties/${propertyId}/hot-deals?from=2026-04-15&to=2026-04-15`,
+        { method: "DELETE" }
+      ),
+      context()
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: { deleted: 1 } });
+  });
+
+  test("rejects a malformed hot deal range before repository access", async () => {
+    const response = await deleteHotDealRange(
+      new Request(
+        `http://localhost/api/properties/${propertyId}/hot-deals?from=2026-04-17&to=2026-04-15`,
+        { method: "DELETE" }
+      ),
+      context()
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "VALIDATION_ERROR" },
+    });
+    expect(getPropertyById).not.toHaveBeenCalled();
+  });
+
+  test("returns not found when the hot deal property does not exist", async () => {
+    vi.mocked(getPropertyById).mockResolvedValue(null);
+
+    const response = await checkHotDealConflicts(
+      new Request(
+        `http://localhost/api/properties/${propertyId}/hot-deals/conflicts`,
+        {
+          method: "POST",
+          body: JSON.stringify({ startDate: "2026-04-15", endDate: "2026-04-17" }),
+        }
+      ),
+      context()
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "NOT_FOUND" },
+    });
   });
 });
