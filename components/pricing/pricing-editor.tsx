@@ -120,7 +120,7 @@ export function PricingEditor({
         {isDrawer && onClose ? (
           <button aria-label="ปิดการตั้งค่าราคา" autoFocus className="drawer-close" onClick={onClose} type="button">×</button>
         ) : null}
-        <p className="pricing-editor__range">{selectionLabel(selectedRange)}</p>
+        <p className="pricing-editor__range">{isDrawer ? drawerSelectionLabel : selectionLabel(selectedRange)}</p>
         {selectedRange ? <span className="pricing-editor__status-pill">{selectionStatus}</span> : null}
       </div>
 
