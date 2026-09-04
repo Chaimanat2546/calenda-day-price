@@ -68,7 +68,7 @@ DELETE /api/properties/:propertyId/daily-prices?from=&to=
 ```
 
 - `POST /conflicts` ตรวจวันซ้ำโดยไม่เปลี่ยนข้อมูล
-- `PUT /range` รับช่วงวัน, สถานะ, ราคาสุทธิ, รายละเอียด และ `confirmed: true` เมื่อมี conflict; ทำ upsert รายวัน
+- `PUT /range` รับช่วงวัน, สถานะ, ราคาสุทธิ, รายละเอียด และ `confirmOverwrite: true` เมื่อมี conflict; ทำ upsert รายวัน
 - `DELETE` ลบ override ของช่วงวัน ทำให้วันนั้นกลับไปใช้ราคาปกติ
 
 ## UI flow
@@ -77,7 +77,7 @@ DELETE /api/properties/:propertyId/daily-prices?from=&to=
 - Mobile ใช้ monthly calendar และ bottom sheet ตาม Stitch
 - เลือกวันเพื่อแก้ไขรายวัน
 - `Bulk Pricing` ใช้ตั้งสถานะเป็นช่วงวัน
-- เมื่อ API ส่ง conflict กลับมา UI แสดง dialog ยืนยันก่อนเรียก `PUT /range` ซ้ำด้วย `confirmed: true`
+- เมื่อ API ส่ง conflict กลับมา UI แสดง dialog ยืนยันก่อนเรียก `PUT /range` ซ้ำด้วย `confirmOverwrite: true`
 
 ## Validation และ error handling
 
