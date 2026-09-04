@@ -2,11 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
-import { checkConflicts, deleteDailyPriceRange, getDailyPrices, getProperties, PricingApiError, updateDailyPriceRange } from "@/components/pricing/api-client";
+import {
+  checkDailyPriceConflicts,
+  checkHotDealConflicts,
+  deleteDailyPriceRange,
+  deleteHotDealRange,
+  getCalendarPrices,
+  getProperties,
+  PricingApiError,
+  updateDailyPriceRange,
+  updateHotDealRange,
+} from "@/components/pricing/api-client";
 import { CalendarDayCell } from "@/components/pricing/calendar-day-cell";
-import { PricingEditor } from "@/components/pricing/pricing-editor";
+import { PricingEditor, type PricingMode } from "@/components/pricing/pricing-editor";
 import { StatusLegend } from "@/components/pricing/status-legend";
-import type { DailyPrice, Property, StatusType } from "@/server/types/pricing";
+import type { CalendarDayPrice, Property, StatusType } from "@/server/types/pricing";
 
 type DateRange = { startDate: string; endDate: string };
 type PricingCalendarProps = { initialMonth?: string };
@@ -91,21 +101,31 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   );
   const [month, setMonth] = useState(initialMonth);
   const [activeProperty, setActiveProperty] = useState<Property | null>(null);
-  const [dailyPrices, setDailyPrices] = useState<DailyPrice[]>([]);
+  const [calendarPrices, setCalendarPrices] = useState<CalendarDayPrice[]>([]);
   const [selectedRange, setSelectedRange] = useState<DateRange | null>(null);
+  const [mode, setMode] = useState<PricingMode>("daily-price");
   const [statusType, setStatusType] = useState<StatusType>("promotion");
-  const [netPrice, setNetPrice] = useState("1500");
-  const [description, setDescription] = useState("");
+  const [dailyPrice, setDailyPrice] = useState("1500");
+  const [dailyDescription, setDailyDescription] = useState("");
+  const [hotDealPrice, setHotDealPrice] = useState("1200");
+  const [showBeforeDays, setShowBeforeDays] = useState("7");
+  const [hotDealDescription, setHotDealDescription] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [conflicts, setConflicts] = useState<string[]>([]);
+  const [conflictsByMode, setConflictsByMode] = useState<Record<PricingMode, string[]>>({
+    "daily-price": [],
+    "hot-deal": [],
+  });
   const [message, setMessage] = useState<string | null>(null);
   const [isMobileEditorOpen, setIsMobileEditorOpen] = useState(false);
   const drawerOpenerRef = useRef<HTMLElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const visibleRange = useMemo(() => monthRange(month), [month]);
   const visibleDays = useMemo(() => datesForMonth(month), [month]);
-  const dailyPriceByDate = useMemo(() => new Map(dailyPrices.map((dailyPrice) => [dailyPrice.date, dailyPrice])), [dailyPrices]);
+  const calendarPriceByDate = useMemo(
+    () => new Map(calendarPrices.map((calendarPrice) => [calendarPrice.date, calendarPrice])),
+    [calendarPrices]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -119,15 +139,15 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
 
   async function refreshPrices(property: Property | null = activeProperty): Promise<void> {
     if (!property) return;
-    setDailyPrices(await getDailyPrices(property.id, visibleRange));
+    setCalendarPrices(await getCalendarPrices(property.id, visibleRange));
   }
 
   useEffect(() => {
     if (!activeProperty) return;
     let mounted = true;
-    void getDailyPrices(activeProperty.id, visibleRange)
+    void getCalendarPrices(activeProperty.id, visibleRange)
       .then((prices) => {
-        if (mounted) setDailyPrices(prices);
+        if (mounted) setCalendarPrices(prices);
       })
       .catch(() => {
         if (mounted) setMessage("ไม่สามารถโหลดราคาพิเศษของเดือนนี้ได้");
@@ -180,7 +200,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
 
   function handleSelectDate(date: string): void {
     setMessage(null);
-    setConflicts([]);
+    setConflictsByMode({ "daily-price": [], "hot-deal": [] });
     openMobileEditor();
     if (!selectedRange || selectedRange.startDate !== selectedRange.endDate) {
       setSelectedRange({ startDate: date, endDate: date });
@@ -191,27 +211,53 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
 
   async function saveRange(confirmOverwrite: boolean): Promise<void> {
     if (!activeProperty || !selectedRange) return;
-    const parsedPrice = Number(netPrice);
+    const activeMode = mode;
+    const parsedPrice = Number(activeMode === "hot-deal" ? hotDealPrice : dailyPrice);
     if (!Number.isInteger(parsedPrice) || parsedPrice <= 0) {
-      setMessage("กรุณาระบุราคาสุทธิเป็นจำนวนเต็มที่มากกว่า 0");
+      setMessage(activeMode === "hot-deal" ? "กรุณาระบุราคา Hot Deal เป็นจำนวนเต็มที่มากกว่า 0" : "กรุณาระบุราคาสุทธิเป็นจำนวนเต็มที่มากกว่า 0");
+      return;
+    }
+    const parsedShowBeforeDays = Number(showBeforeDays);
+    if (activeMode === "hot-deal" && (!Number.isInteger(parsedShowBeforeDays) || parsedShowBeforeDays < 0 || parsedShowBeforeDays > 365)) {
+      setMessage("กรุณาระบุวันเริ่มแสดงล่วงหน้าเป็นจำนวนเต็มระหว่าง 0 ถึง 365");
       return;
     }
     setIsSaving(true);
     setMessage(null);
     try {
       if (!confirmOverwrite) {
-        const dates = await checkConflicts(activeProperty.id, selectedRange);
+        const dates = activeMode === "hot-deal"
+          ? await checkHotDealConflicts(activeProperty.id, selectedRange)
+          : await checkDailyPriceConflicts(activeProperty.id, selectedRange);
         if (dates.length > 0) {
-          setConflicts(dates);
+          setConflictsByMode((current) => ({ ...current, [activeMode]: dates }));
           return;
         }
       }
-      await updateDailyPriceRange(activeProperty.id, { ...selectedRange, statusType, netPrice: parsedPrice, description: description.trim() || null, confirmOverwrite });
-      setConflicts([]);
+      if (activeMode === "hot-deal") {
+        await updateHotDealRange(activeProperty.id, {
+          ...selectedRange,
+          netPrice: parsedPrice,
+          showBeforeDays: parsedShowBeforeDays,
+          description: hotDealDescription.trim() || null,
+          confirmOverwrite,
+        });
+      } else {
+        await updateDailyPriceRange(activeProperty.id, {
+          ...selectedRange,
+          statusType,
+          netPrice: parsedPrice,
+          description: dailyDescription.trim() || null,
+          confirmOverwrite,
+        });
+      }
+      setConflictsByMode((current) => ({ ...current, [activeMode]: [] }));
       await refreshPrices();
-      setMessage("บันทึกราคาพิเศษแล้ว");
+      setMessage(activeMode === "hot-deal" ? "บันทึก Hot Deal แล้ว" : "บันทึกราคาพิเศษแล้ว");
     } catch (error) {
-      if (error instanceof PricingApiError && error.conflicts.length > 0) setConflicts(error.conflicts);
+      if (error instanceof PricingApiError && error.conflicts.length > 0) {
+        setConflictsByMode((current) => ({ ...current, [activeMode]: error.conflicts }));
+      }
       else setMessage(error instanceof Error ? error.message : "ไม่สามารถบันทึกราคาได้");
     } finally {
       setIsSaving(false);
@@ -219,14 +265,21 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   }
 
   async function handleDelete(): Promise<void> {
-    if (!activeProperty || !selectedRange || !window.confirm("ลบสถานะราคาพิเศษในช่วงวันที่เลือกหรือไม่?")) return;
+    if (!activeProperty || !selectedRange) return;
+    const activeMode = mode;
+    const confirmed = window.confirm(activeMode === "hot-deal" ? "ลบ Hot Deal ในช่วงวันที่เลือกหรือไม่?" : "ลบสถานะราคาพิเศษในช่วงวันที่เลือกหรือไม่?");
+    if (!confirmed) return;
     setIsSaving(true);
     setMessage(null);
     try {
-      const deleted = await deleteDailyPriceRange(activeProperty.id, selectedRange);
+      const deleted = activeMode === "hot-deal"
+        ? await deleteHotDealRange(activeProperty.id, selectedRange)
+        : await deleteDailyPriceRange(activeProperty.id, selectedRange);
       await refreshPrices();
-      setConflicts([]);
-      setMessage(deleted > 0 ? "ลบสถานะราคาพิเศษแล้ว" : "ไม่พบสถานะในช่วงวันที่เลือก");
+      setConflictsByMode((current) => ({ ...current, [activeMode]: [] }));
+      setMessage(deleted > 0
+        ? activeMode === "hot-deal" ? "ลบ Hot Deal แล้ว" : "ลบสถานะราคาพิเศษแล้ว"
+        : activeMode === "hot-deal" ? "ไม่พบ Hot Deal ในช่วงวันที่เลือก" : "ไม่พบสถานะในช่วงวันที่เลือก");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "ไม่สามารถลบสถานะได้");
     } finally {
@@ -235,18 +288,25 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   }
 
   const editorProps = {
-    conflicts,
-    description,
+    conflicts: conflictsByMode[mode],
+    description: mode === "hot-deal" ? hotDealDescription : dailyDescription,
     isSaving,
     message,
-    netPrice,
+    mode,
+    netPrice: mode === "hot-deal" ? hotDealPrice : dailyPrice,
     onConfirmOverwrite: () => void saveRange(true),
     onDelete: () => void handleDelete(),
-    onDescriptionChange: setDescription,
-    onPriceChange: setNetPrice,
+    onDescriptionChange: mode === "hot-deal" ? setHotDealDescription : setDailyDescription,
+    onModeChange: (nextMode: PricingMode) => {
+      setMode(nextMode);
+      setMessage(null);
+    },
+    onPriceChange: mode === "hot-deal" ? setHotDealPrice : setDailyPrice,
     onSave: () => void saveRange(false),
+    onShowBeforeDaysChange: setShowBeforeDays,
     onStatusChange: setStatusType,
     selectedRange,
+    showBeforeDays,
     statusType,
   };
 
@@ -275,7 +335,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
               {Array.from({ length: visibleDays[0]?.weekday ?? 0 }, (_, index) => <div aria-hidden="true" className="calendar-grid__blank" key={`blank-${index}`} />)}
               {visibleDays.map((day) => {
                 const isSelected = Boolean(selectedRange && (day.date === selectedRange.startDate || day.date === selectedRange.endDate));
-                return <CalendarDayCell dailyPrice={dailyPriceByDate.get(day.date)} date={day.date} day={day.day} isInRange={isWithinRange(day.date, selectedRange)} isSelected={isSelected} key={day.date} label={thaiDayFormatter.format(dateForDisplay(day.date))} onSelect={handleSelectDate} />;
+                return <CalendarDayCell calendarPrice={calendarPriceByDate.get(day.date)} date={day.date} day={day.day} isInRange={isWithinRange(day.date, selectedRange)} isSelected={isSelected} key={day.date} label={thaiDayFormatter.format(dateForDisplay(day.date))} onSelect={handleSelectDate} />;
               })}
             </div>
           </section>

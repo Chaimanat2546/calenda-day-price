@@ -110,7 +110,7 @@ describe("PricingCalendar", () => {
     expect(document.activeElement).toBe(opener);
   });
 
-  test("checks conflicts before rendering the overwrite confirmation", async () => {
+  test("checks daily price conflicts before rendering the overwrite confirmation", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -129,7 +129,7 @@ describe("PricingCalendar", () => {
     await user.click(screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" }));
     expect(await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "เลือกวันที่ 17 เมษายน 2569" }));
-    await user.selectOptions(screen.getByLabelText("สถานะ"), "hot_deal");
+    await user.selectOptions(screen.getByLabelText("สถานะ"), "holiday");
     await user.clear(screen.getByLabelText("ราคาสุทธิ"));
     await user.type(screen.getByLabelText("ราคาสุทธิ"), "2200");
     await user.click(screen.getByRole("button", { name: "บันทึกราคาพิเศษ" }));
@@ -159,12 +159,130 @@ describe("PricingCalendar", () => {
       expect(JSON.parse(String(overwriteRequest?.[1]?.body))).toEqual({
         startDate: "2026-04-15",
         endDate: "2026-04-17",
-        statusType: "hot_deal",
+        statusType: "holiday",
         netPrice: 2200,
         description: null,
         confirmOverwrite: true,
       });
     });
+  });
+
+  test("uses the Hot Deal conflict endpoint after switching editor mode", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }))
+      .mockResolvedValueOnce(jsonResponse({ data: { dates: [] } }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
+    await user.click(screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" }));
+    await user.click(screen.getByRole("button", { name: "🔥 Hot Deal" }));
+    await user.clear(screen.getByLabelText("ราคา Hot Deal"));
+    await user.type(screen.getByLabelText("ราคา Hot Deal"), "1200");
+    await user.clear(screen.getByLabelText("เริ่มแสดงล่วงหน้า"));
+    await user.type(screen.getByLabelText("เริ่มแสดงล่วงหน้า"), "5");
+    await user.click(screen.getByRole("button", { name: "บันทึก Hot Deal" }));
+
+    await waitFor(() => {
+      const conflictRequest = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).endsWith("/hot-deals/conflicts") && init?.method === "POST"
+      );
+      expect(conflictRequest).toBeTruthy();
+      expect(JSON.parse(String(conflictRequest?.[1]?.body))).toEqual({
+        startDate: "2026-04-15",
+        endDate: "2026-04-15",
+      });
+      expect(
+        fetchMock.mock.calls.some(([url]) => String(url).endsWith("/daily-prices/conflicts"))
+      ).toBe(false);
+    });
+
+    await waitFor(() => {
+      const updateRequest = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).endsWith("/hot-deals/range") && init?.method === "PUT"
+      );
+      expect(updateRequest).toBeTruthy();
+      expect(JSON.parse(String(updateRequest?.[1]?.body))).toEqual({
+        startDate: "2026-04-15",
+        endDate: "2026-04-15",
+        netPrice: 1200,
+        showBeforeDays: 5,
+        description: null,
+        confirmOverwrite: false,
+      });
+    });
+  });
+
+  test("composes the Holiday base style with the Hot Deal overlay", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [
+            {
+              date: "2026-04-15",
+              status_type: "holiday",
+              net_price: 1200,
+              is_hot_deal: true,
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    const day = await screen.findByRole("button", {
+      name: /เลือกวันที่ 15 เมษายน 2569/,
+    });
+    await waitFor(() => {
+      expect(day.classList.contains("pricing-day--holiday")).toBe(true);
+      expect(day.classList.contains("pricing-day--hot-deal")).toBe(true);
+    });
+    expect(within(day).getByRole("img", { name: "Hot Deal" })).toBeTruthy();
+    expect(within(day).getByText("฿1,200")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/properties/${property.id}/calendar-prices?from=2026-04-01&to=2026-04-30`,
+      undefined
+    );
+  });
+
+  test("retains the Promotion marker when a Hot Deal overlay is active", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ data: [property] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [
+            {
+              date: "2026-04-15",
+              status_type: "promotion",
+              net_price: 1200,
+              is_hot_deal: true,
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PricingCalendar initialMonth="2026-04" />);
+
+    const day = await screen.findByRole("button", {
+      name: /เลือกวันที่ 15 เมษายน 2569/,
+    });
+    await waitFor(() => {
+      expect(day.classList.contains("pricing-day--promotion")).toBe(true);
+      expect(day.classList.contains("pricing-day--hot-deal")).toBe(true);
+    });
+    expect(within(day).getByRole("img", { name: "โปรโมชั่น" })).toBeTruthy();
+    expect(within(day).getByRole("img", { name: "Hot Deal" })).toBeTruthy();
   });
 
   test("disables saving while a range update is pending to prevent duplicate submissions", async () => {

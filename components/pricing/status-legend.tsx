@@ -1,11 +1,8 @@
-import type { StatusType } from "@/server/types/pricing";
-
-const statuses: Array<{ type: StatusType; label: string; mark: string }> = [
-  { type: "holiday_hot_deal", label: "โปรไฟลุกในวันหยุด", mark: "🔥" },
+const statuses = [
   { type: "holiday", label: "วันหยุด", mark: "" },
-  { type: "hot_deal", label: "โปรไฟลุก", mark: "🔥" },
   { type: "promotion", label: "โปรโมชั่น", mark: "✦" },
-];
+  { type: "hot-deal", label: "Hot Deal", mark: "🔥" },
+] as const;
 
 export function StatusLegend() {
   return (
