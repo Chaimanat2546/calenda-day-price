@@ -20,12 +20,16 @@ Demo สำหรับจัดการราคาสุทธิรายว
 npm install
 ```
 
-สร้าง `.env` ใน project root และใส่ชื่อ environment variable ต่อไปนี้ (ห้าม commit ค่า):
+คัดลอก `.env.example` เป็น `.env.local` ใน project root แล้วแทนค่าตัวอย่างด้วยค่าของโปรเจกต์คุณ หากมี `.env.local` อยู่แล้ว ให้แก้ไฟล์เดิมโดยไม่คัดลอกทับ:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ```
+
+ดู Project URL และ Publishable key ได้ที่ Supabase Dashboard → โปรเจกต์ของคุณ → **Connect** ตาม [คู่มือ API keys](https://supabase.com/docs/guides/getting-started/api-keys) ใช้ค่าจากโปรเจกต์เดียวกัน และห้ามใช้ secret key หรือ service_role key ในตัวแปร `NEXT_PUBLIC_` หลังเปลี่ยนค่าให้ restart development server
+
+`.env.example` เก็บเฉพาะตัวอย่างและ commit ได้ ส่วน `.env.local` ถูก Git ignore
 
 รัน development server:
 
@@ -37,9 +41,10 @@ npm run dev
 
 ## Supabase schema และ seed
 
-ไฟล์ schema และ seed ถูกเขียนไว้แล้ว แต่ **ยังไม่ได้ apply**:
+ตรวจเมื่อ 9 กันยายน 2026: migration ทั้งสองและ seed ถูก apply แล้วบน Supabase remote ที่เชื่อมกับโปรเจกต์นี้; API อ่านตารางทั้งสามได้ และมี “บ้านพักตัวอย่าง” พร้อมใช้งาน:
 
 - migration: `supabase/migrations/202609040001_create_pricing_tables.sql`
+- migration สิทธิ์และ RLS: `supabase/migrations/20260904095533_grant_pricing_api_access.sql`
 - seed: `supabase/seed.sql`
 
 วิธี apply ด้วยตนเองอย่างปลอดภัย:
@@ -77,3 +82,8 @@ npm run build    # production build
 | DELETE | `/api/properties/:propertyId/hot-deals?from=&to=` | ลบ Hot Deal เพื่อกลับไปใช้ Daily Price ของวันนั้น หรือราคาปกติเมื่อไม่มี Daily Price |
 
 รายละเอียด architecture, data model และข้อจำกัดเพิ่มเติมอยู่ใน [CONTEXT.md](./CONTEXT.md)
+# หน้าดูราคาสำหรับลูกค้า
+
+เปิด `/stay` เพื่อเลือกบ้านและดูปฏิทินราคา ลูกค้าสามารถเปลี่ยนเดือนและเลือกวันเพื่ออ่านเงื่อนไขได้ โดยไม่มีตัวแก้ไขราคา โปรไฟลุกแสดงเฉพาะช่วงล่วงหน้าที่ตั้งไว้จนถึงวันเข้าพัก ตามวันที่ประเทศไทยที่คำนวณบนเซิร์ฟเวอร์ นอกช่วงดังกล่าวใช้ราคาพิเศษรายวันหรือราคาปกติ
+
+มีปุ่ม “ดูหน้าลูกค้า” ในหน้ารายการบ้านฝั่งจัดการ และสามารถแชร์ URL `/stay/[propertyId]` ของบ้านแต่ละหลังได้ ระบบยังไม่ได้เพิ่มการจองห้องหรือการล็อกอินผู้ดูแล

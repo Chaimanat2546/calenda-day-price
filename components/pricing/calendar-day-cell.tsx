@@ -1,4 +1,4 @@
-import { Tag } from "lucide-react";
+import { Check, Sun, Tag } from "lucide-react";
 
 import type { CalendarDayPrice, StatusType } from "@/server/types/pricing";
 import { BASE_DAILY_PRICE } from "@/server/types/pricing";
@@ -17,11 +17,6 @@ const statusLabels: Record<StatusType, string> = {
   holiday: "วันหยุด",
   promotion: "โปรโมชั่น",
 };
-
-function formatCompactPrice(price: number): string {
-  const thousands = price / 1000;
-  return `฿${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}k`;
-}
 
 export function CalendarDayCell({
   date,
@@ -44,28 +39,38 @@ export function CalendarDayCell({
     : isInRange
       ? " pricing-day--in-range"
       : "";
-  const statusLabel = `${visibleStatus ? `, ${statusLabels[visibleStatus]}` : ""}${isHotDeal ? ", โปรไฟลุก" : ""}`;
+  const statusLabel = status === "holiday" && isHotDeal ? ", โปรไฟลุกในวันหยุด" : `${visibleStatus ? `, ${statusLabels[visibleStatus]}` : ""}${isHotDeal ? ", โปรไฟลุก" : ""}`;
   const activePrice = hasSpecialPrice ? calendarPrice?.net_price ?? BASE_DAILY_PRICE : BASE_DAILY_PRICE;
-  const showBasePrice = hasSpecialPrice && visibleStatus !== "holiday";
 
   return (
     <button
       aria-label={`เลือกวันที่ ${label}${statusLabel}`}
+      aria-describedby={`day-price-${date}`}
+      aria-pressed={isSelected || isInRange}
       className={`pricing-day${baseModifier}${hotDealModifier}${hotDealRangeModifier}${selection}`}
       data-date={date}
+      title={`${label}${statusLabel} · ${activePrice.toLocaleString("th-TH")} บาทต่อคืน`}
       onClick={() => onSelect(date)}
       type="button"
     >
-      <span className="pricing-day__number">{day}</span>
+      <span className="pricing-day__header">
+        <span className="pricing-day__number">{day}</span>
+        {isSelected ? <Check aria-hidden="true" className="pricing-day__check" size={13} /> : null}
+      </span>
+      <span className="pricing-day__statuses">
+      {visibleStatus === "holiday" && !isHotDeal ? (
+        <span className="pricing-day__badge pricing-day__badge--holiday"><Sun aria-label="วันหยุด" role="img" size={13} /><span aria-hidden="true">วันหยุด</span></span>
+      ) : null}
       {visibleStatus === "promotion" ? (
-        <Tag aria-label="โปรโมชั่น" className="pricing-day__mark pricing-day__mark--tag" role="img" size={14} />
+        <span className="pricing-day__badge pricing-day__badge--promotion"><Tag aria-label="โปรโมชั่น" className="pricing-day__mark--tag" role="img" size={13} /><span aria-hidden="true">โปรโมชัน</span></span>
       ) : null}
       {isHotDeal ? (
-        <span aria-label="โปรไฟลุก" className="pricing-day__mark" role="img">🔥</span>
+        <span className={`pricing-day__badge pricing-day__badge--${status === "holiday" ? "holiday-hot-deal" : "hot-deal"}`}><span aria-label="โปรไฟลุก" className="hot-deal-flame" role="img">🔥</span><span aria-hidden="true">{status === "holiday" ? "โปรไฟลุกในวันหยุด" : "โปรไฟลุก"}</span></span>
       ) : null}
-      <span aria-hidden="true" className="pricing-day__price pricing-day__price--mobile">{formatCompactPrice(activePrice)}</span>
-      <span className="pricing-day__price pricing-day__price--desktop">฿{activePrice.toLocaleString("th-TH")}</span>
-      {showBasePrice ? <span className="pricing-day__base-price">฿{BASE_DAILY_PRICE.toLocaleString("th-TH")}</span> : null}
+      </span>
+      <span aria-hidden="true" className="pricing-day__price pricing-day__price--mobile">{activePrice.toLocaleString("th-TH")}</span>
+      <span aria-hidden="true" className="pricing-day__price pricing-day__price--desktop">฿{activePrice.toLocaleString("th-TH")}</span>
+      <span className="sr-only" id={`day-price-${date}`}>{activePrice.toLocaleString("th-TH")} บาทต่อคืน</span>
     </button>
   );
 }

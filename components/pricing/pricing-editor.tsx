@@ -1,5 +1,5 @@
-import type { Ref } from "react";
-import { Flame, RotateCcw, Save, Sparkles, Sun, Tag } from "lucide-react";
+import { useState, type Ref } from "react";
+import { RotateCcw, Save, Sparkles, Sun, Tag } from "lucide-react";
 
 import type { CalendarDayPrice, StatusType } from "@/server/types/pricing";
 
@@ -37,6 +37,7 @@ const statusOptions: Array<{ value: StatusType; label: string }> = [
 ];
 
 function calendarPriceStatusLabel(calendarPrice: CalendarDayPrice): string {
+  if (calendarPrice.is_hot_deal) return calendarPrice.status_type === "holiday" ? "โปรไฟลุกในวันหยุด" : "โปรไฟลุก";
   const labels: string[] = [];
   const statusLabel = statusOptions.find((option) => option.value === calendarPrice.status_type)?.label;
   if (statusLabel) labels.push(statusLabel);
@@ -95,6 +96,20 @@ export function PricingEditor({
   propertyName,
   selectedCalendarPrice,
 }: PricingEditorProps) {
+  const [leadTimeUnit, setLeadTimeUnit] = useState<"days" | "months">("days");
+  const monthMode = leadTimeUnit === "months" && (showBeforeDays === "" || Number(showBeforeDays) % 30 === 0);
+  const leadTimeFactor = monthMode ? 30 : 1;
+  const leadTimeValue = showBeforeDays === "" ? "" : String(Number(showBeforeDays) / leadTimeFactor);
+  const leadTimeMax = monthMode ? 12 : 365;
+  function changeLeadTime(value: string): void {
+    onShowBeforeDaysChange(value === "" ? "" : String(Number(value) * leadTimeFactor));
+  }
+  function selectLeadTimeUnit(unit: "days" | "months"): void {
+    if (unit === "months" && !monthMode) {
+      onShowBeforeDaysChange(String(Math.min(12, Math.ceil(Number(showBeforeDays) / 30)) * 30));
+    }
+    setLeadTimeUnit(unit);
+  }
   const disabled = !selectedRange || isSaving;
   const isHotDeal = mode === "hot-deal";
   const selectionStatus = selectedCalendarPrice
@@ -115,6 +130,7 @@ export function PricingEditor({
       aria-label="ตั้งค่าราคาพิเศษ"
       aria-modal={isDrawer || undefined}
       className="pricing-editor"
+      data-mode={mode}
       id={isDrawer ? "mobile-pricing-drawer" : undefined}
       ref={inspectorRef}
       role={isDrawer ? "dialog" : undefined}
@@ -129,7 +145,6 @@ export function PricingEditor({
             <h2>ปรับแต่งราคาพิเศษ</h2>
           </div>
         </div>
-        <span className="pricing-editor__active-badge">SPECIAL<br />ACTIVE</span>
         {isDrawer && onClose ? (
           <button aria-label="ปิดการตั้งค่าราคา" autoFocus className="drawer-close" onClick={onClose} type="button">×</button>
         ) : null}
@@ -137,16 +152,16 @@ export function PricingEditor({
 
       <div aria-label="โหมดตั้งราคา" className="pricing-editor__mode-switcher" role="group">
         <button aria-pressed={!isHotDeal} disabled={isSaving} onClick={() => onModeChange("daily-price")} type="button"><Tag aria-hidden="true" size={15} />ราคาพิเศษ</button>
-        <button aria-pressed={isHotDeal} disabled={isSaving} onClick={() => onModeChange("hot-deal")} type="button"><Flame aria-hidden="true" size={15} />โปรไฟลุก</button>
+        <button aria-pressed={isHotDeal} disabled={isSaving} onClick={() => onModeChange("hot-deal")} type="button"><span aria-hidden="true" className="hot-deal-flame">🔥</span>โปรไฟลุก</button>
       </div>
 
       {selectedRange ? (
         <section aria-label="วันที่ที่เลือก" className="pricing-editor__selection-card">
           <div className="pricing-editor__selection-card-header">
             <span>วันที่กำลังเลือก</span>
-            <span className="pricing-editor__status-pill">
-              {hasPromotion ? <Tag aria-label="โปรโมชั่น" role="img" size={12} /> : null}
-              {hasHotDeal ? <Flame aria-label="โปรไฟลุก" role="img" size={12} /> : null}
+            <span className="pricing-editor__status-pill" data-status={hasHotDeal ? (selectedCalendarPrice?.status_type === "holiday" ? "holiday-hot-deal" : "hot-deal") : selectedCalendarPrice?.status_type ?? "normal"}>
+              {hasPromotion && !hasHotDeal ? <Tag aria-label="โปรโมชั่น" role="img" size={12} /> : null}
+              {hasHotDeal ? <span aria-label="โปรไฟลุก" className="hot-deal-flame" role="img">🔥</span> : null}
               {selectionStatus}
             </span>
           </div>
@@ -166,24 +181,34 @@ export function PricingEditor({
               <div aria-label="ปรับราคา Hot Deal ครั้งละ 200 บาท" className="price-stepper"><button aria-label="-฿200" disabled={disabled} onClick={() => changePrice(-200)} type="button">− ฿200</button><button aria-label="+฿200" disabled={disabled} onClick={() => changePrice(200)} type="button">+ ฿200</button></div>
             </div>
             <div className="pricing-field">
-              <div className="pricing-field__label-row"><label htmlFor="hot-deal-show-before-days">เริ่มแสดงล่วงหน้า</label><span>จำนวนวัน</span></div>
-              <input aria-label="เริ่มแสดงล่วงหน้า" disabled={disabled} id="hot-deal-show-before-days" inputMode="numeric" max="365" min="0" onChange={(event) => onShowBeforeDaysChange(event.target.value)} type="number" value={showBeforeDays} />
+              <div className="pricing-field__label-row">
+                <label htmlFor="hot-deal-show-before-days">เริ่มแสดงล่วงหน้า</label>
+                <div aria-label="หน่วยระยะเวลา" className="lead-time-units" role="group">
+                  <button aria-pressed={!monthMode} disabled={disabled} onClick={() => selectLeadTimeUnit("days")} type="button">รายวัน</button>
+                  <button aria-pressed={monthMode} disabled={disabled} onClick={() => selectLeadTimeUnit("months")} type="button">รายเดือน</button>
+                </div>
+              </div>
+              <div className="lead-time-stepper">
+                <button aria-label="ลดระยะเวลา" disabled={disabled || Number(leadTimeValue) <= 0} onClick={() => changeLeadTime(String(Math.max(0, Number(leadTimeValue) - 1)))} type="button">−</button>
+                <input aria-label="เริ่มแสดงล่วงหน้า" aria-describedby="lead-time-help" disabled={disabled} id="hot-deal-show-before-days" inputMode="numeric" max={leadTimeMax} min="0" step="1" onChange={(event) => changeLeadTime(event.target.value)} type="number" value={leadTimeValue} />
+                <span>{monthMode ? "เดือน" : "วัน"}</span>
+                <button aria-label="เพิ่มระยะเวลา" disabled={disabled || Number(leadTimeValue) >= leadTimeMax} onClick={() => changeLeadTime(String(Math.min(leadTimeMax, Number(leadTimeValue) + 1)))} type="button">+</button>
+              </div>
             </div>
-            {isDrawer ? (
               <div aria-label="ตัวเลือกระยะเวลาแสดง Hot Deal" className="lead-time-presets" role="group">
-                {[3, 7, 14, 30].map((days) => (
+                {(monthMode ? [1, 3, 6, 12] : [3, 7, 14, 30]).map((days) => (
                   <button
-                    aria-pressed={Number(showBeforeDays) === days}
+                    aria-pressed={Number(leadTimeValue) === days}
                     disabled={disabled}
                     key={days}
-                    onClick={() => onShowBeforeDaysChange(String(days))}
+                    onClick={() => changeLeadTime(String(days))}
                     type="button"
                   >
-                    {days === 7 ? "7 วัน (แนะนำ)" : `${days} วัน`}
+                    {monthMode ? `${days} เดือน` : days === 7 ? "7 วัน (แนะนำ)" : `${days} วัน`}
                   </button>
                 ))}
               </div>
-            ) : null}
+            <p className="lead-time-help" id="lead-time-help">กำหนดว่าลูกค้าจะเริ่มเห็นโปรไฟลุกในตารางก่อนวันเข้าพักกี่วัน เช่น ตั้ง 7 วัน ลูกค้าจะเห็นโปรตั้งแต่ 7 วันก่อนวันเข้าพักจนถึงวันเข้าพัก ก่อนช่วงนี้จะยังไม่เห็นโปร{monthMode ? " · 1 เดือน = 30 วัน (เมื่อเปลี่ยนเป็นรายเดือนจะปัดขึ้นเป็นเดือนเต็ม สูงสุด 12 เดือน)" : ""}</p>
           </>
         ) : (
           <>

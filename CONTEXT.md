@@ -24,12 +24,17 @@
 - `daily_price` มีสถานะฐานได้เพียงหนึ่งรายการต่อบ้านพักต่อวัน จาก `unique(property_id, date)` แต่ Hot Deal เป็น record แยกและสามารถ overlay บนสถานะฐานของวันเดียวกันได้
 - `daily_price` รองรับเฉพาะสถานะฐาน `holiday` และ `promotion`; `net_price` เป็นจำนวนเงินบาทเต็มบวก และ `description` เป็นข้อความหมายเหตุของวันนั้น
 - Hot Deal อยู่ในตาราง `hot_deals` แยกจาก Daily Price โดยมีราคา, จำนวนวันแสดงล่วงหน้า (`show_before_days`), หมายเหตุ และ `unique(property_id, date)` จึงมีได้หนึ่งดีลต่อบ้านพักต่อวัน
+- ฟอร์ม Hot Deal เลือกระยะเวลาแสดงล่วงหน้าเป็นรายวัน (0–365 วัน) หรือรายเดือน (0–12 เดือน) ได้ โดย 1 เดือน = 30 วัน และส่ง API เป็นจำนวนวันตามเดิม; การสลับเป็นรายเดือนปัดขึ้นเป็นเดือนเต็มและจำกัดที่ 12 เดือน
 - การตั้ง Daily Price เป็นช่วงวันจะคัดลอกสถานะ, ราคา และหมายเหตุเดียวกันไปยังแต่ละวัน
 - การบันทึก Hot Deal แบบช่วงวันจะขยายและบันทึกค่าชุดเดียวกันลงทุกวันในช่วงที่เลือก โดยตรวจวันชนก่อนและต้องยืนยันเมื่อจะเขียนทับ
 - ปัจจุบัน `/calendar-prices` ใช้กับหน้าจัดการเท่านั้น: ทุกวันที่มี Hot Deal จะแสดงราคา Hot Deal และ `is_hot_deal: true` เสมอ โดยไม่พิจารณา `show_before_days`; จำนวนวันแสดงล่วงหน้าเก็บไว้สำหรับ public booking flow ในอนาคต ซึ่งยังไม่มีในระบบ
 - การลบ Daily Price ทำให้วันนั้นกลับไปใช้ราคาปกติ ฿1,500 ส่วนการลบ Hot Deal จะกลับไปใช้ Daily Price ของวันนั้นเมื่อมีอยู่ มิฉะนั้นจึงใช้ราคาปกติ
 
 ## Schema และ seed ของ Supabase
+
+- หน้าเริ่มต้นเป็น `PropertyWorkspace`: ค้นหาบ้านและกรองทำเล ก่อนเปิดปฏิทินของบ้านที่เลือก มีตัวเลือกเปลี่ยนบ้านที่คงเดือนเดิม แต่ล้างช่วงวันและ draft ผ่านการ remount ตาม property id
+- การกลับรายการ/เปลี่ยนบ้านตรวจ draft ที่ยังไม่บันทึก มีตัวเลือกกลับไปบันทึก ทิ้ง หรือยกเลิก และเตือนเมื่อปิด/รีเฟรชเว็บ
+- ตาราง `properties` เพิ่ม `location` และ `image_url` (nullable, HTTPS) ผ่าน `20260909050702_add_property_display_metadata.sql` ซึ่ง apply แล้วบน remote; เมื่อไม่มีรูป/ทำเลจะแสดง placeholder โดยไม่สร้าง metadata สมมติ การกรอก metadata ยังทำผ่านระบบข้อมูลเดิม
 
 - migration ที่เขียนไว้: `supabase/migrations/202609040001_create_pricing_tables.sql`
   - `properties`: บ้านพัก
@@ -40,6 +45,7 @@
   - เปิด RLS ทั้งสามตาราง แต่ policy ปัจจุบันยังเป็น demo policy ที่อนุญาตทุกแถว เพื่อให้ UI ที่ยังไม่มี login ใช้งานได้
 - seed ที่เขียนไว้: `supabase/seed.sql` สร้าง “บ้านพักตัวอย่าง” เมื่อยังไม่มีบ้านพัก
 - **สถานะ local: migration ทั้งสองและ seed ถูก apply แล้ว**; การ deploy/remote ต้อง apply ผ่าน workflow ของ Supabase ที่ต้องการ
+- **สถานะ remote ณ 9 กันยายน 2026:** apply migration ทั้งสองและ seed แล้วบนโปรเจกต์ `phwcjavlwnamunakxeuq` ซึ่งตรงกับ `.env.local`; migration history ตรงกับไฟล์ใน repo, ตารางทั้งสามเปิด RLS และอ่านผ่าน Publishable Key ได้ (HTTP 200) มี “บ้านพักตัวอย่าง” 1 หลังพร้อมใช้งาน ส่วนราคาเฉพาะวันและ Hot Deal ยังว่าง
 - ห้ามใส่ค่า environment variable หรือ credential ในเอกสารและ commit
 
 ## Architecture
@@ -93,3 +99,10 @@ DELETE /api/properties/:propertyId/hot-deals?from=&to=
 1. แทนที่ demo RLS policy ด้วย authentication, tenant/data scope และ ownership predicate ก่อนเปิดให้ผู้ใช้จริงใช้งาน
 2. Apply migration ทั้งสองกับ Supabase remote ผ่าน workflow ที่ต้องการก่อนใช้งานจริง
 3. ตรวจ flow ของ `lib/middleware.ts` อีกครั้งเมื่อเริ่มทำ auth เพราะ demo ปัจจุบันไม่มี auth flow ใน UI
+# หน้าสำหรับลูกค้า
+
+- `/stay` แสดงรายชื่อบ้านพร้อมค้นหาและกรองทำเล; `/stay/[propertyId]?month=YYYY-MM` แสดงปฏิทินราคาแบบอ่านอย่างเดียวและรายละเอียดเมื่อเลือกวัน
+- `public-pricing-service.ts` อ่านข้อมูลผ่าน repository และคำนวณวันปัจจุบันตาม Asia/Bangkok บน server
+- โปรไฟลุกแสดงเมื่อวันปัจจุบันอยู่ระหว่าง `date - show_before_days` และ `date` (รวมทั้งสองวัน) ก่อนส่งข้อมูลเข้า client; นอกช่วงใช้ daily price หรือราคาปกติเดิม
+- หน้าจัดการยังเห็นโปรที่ตั้งไว้ทั้งหมดตามเดิม; ระบบนี้ยังใช้สิทธิ์ demo เดิม หน้าลูกค้าไม่ใช่การเพิ่ม authentication หรือปิด management API
+- ปฏิทินแสดงราคา ไม่ได้แสดงสถานะห้องว่างหรือรับจอง

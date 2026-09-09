@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 
 describe("PricingCalendar", () => {
-  test("shows the Stitch desktop inspector controls and resets the active range from Bulk Pricing", async () => {
+  test("shows the Stitch desktop inspector controls and resets the active range from เลือกหลายวัน", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "matchMedia",
@@ -57,7 +57,7 @@ describe("PricingCalendar", () => {
     render(<PricingCalendar initialMonth="2026-04" />);
 
     await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
-    expect(screen.getByRole("button", { name: "Bulk Pricing" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "เลือกหลายวัน" })).toBeTruthy();
     expect(screen.getByText("CELL INSPECTOR")).toBeTruthy();
     expect(screen.getByRole("button", { name: "-฿200" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "+฿200" })).toBeTruthy();
@@ -68,7 +68,7 @@ describe("PricingCalendar", () => {
     expect((screen.getByLabelText("ราคาสุทธิ") as HTMLInputElement).value).toBe("1700");
     await user.click(screen.getByRole("button", { name: "-฿200" }));
     expect((screen.getByLabelText("ราคาสุทธิ") as HTMLInputElement).value).toBe("1500");
-    await user.click(screen.getByRole("button", { name: "Bulk Pricing" }));
+    await user.click(screen.getByRole("button", { name: "เลือกหลายวัน" }));
     expect(screen.getByRole("button", { name: "บันทึกราคาพิเศษ" }).hasAttribute("disabled")).toBe(true);
   });
 
@@ -87,28 +87,30 @@ describe("PricingCalendar", () => {
     expect(within(day).getByText("฿1,500", { exact: true })).toBeTruthy();
   });
 
-  test("returns mobile Bulk Pricing to the calendar so a new range can be selected", async () => {
+  test("selects a single day by default and waits for both range endpoints on mobile", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi
-      .fn<typeof fetch>()
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse({ data: [property] }))
-      .mockResolvedValueOnce(jsonResponse({ data: [] }));
-    vi.stubGlobal("fetch", fetchMock);
-
+      .mockResolvedValueOnce(jsonResponse({ data: [] })));
     render(<PricingCalendar initialMonth="2026-04" />);
-
-    await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
-    await user.click(screen.getByRole("button", { name: "Bulk Pricing" }));
-    const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
-    await user.click(within(drawer).getByRole("button", { name: "เลือกวันในปฏิทิน" }));
-
-    const firstDay = screen.getByRole("button", { name: "เลือกวันที่ 1 เมษายน 2569" });
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" })).toBeNull();
-      expect(document.activeElement).toBe(firstDay);
-    });
-    await user.click(firstDay);
-    expect((await screen.findByRole("button", { name: "บันทึกราคาพิเศษ" })).hasAttribute("disabled")).toBe(false);
+    const first = await screen.findByRole("button", { name: "เลือกวันที่ 1 เมษายน 2569" });
+    const third = screen.getByRole("button", { name: "เลือกวันที่ 3 เมษายน 2569" });
+    await user.click(first);
+    await user.keyboard("{Escape}");
+    await user.click(third);
+    expect(first.getAttribute("aria-pressed")).toBe("false");
+    expect(third.getAttribute("aria-pressed")).toBe("true");
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "เลือกหลายวัน" }));
+    await user.click(third);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(first);
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "เลือกวันที่ 2 เมษายน 2569" }).getAttribute("aria-pressed")).toBe("true");
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "เลือกหลายวัน" }));
+    await user.click(third);
+    expect(first.getAttribute("aria-pressed")).toBe("false");
   });
 
   test("lists all pricing states in the legend", async () => {
@@ -167,7 +169,7 @@ describe("PricingCalendar", () => {
     render(<PricingCalendar initialMonth="2026-04" />);
 
     const day = await screen.findByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" });
-    expect(within(day).getByText("฿1.5k", { exact: true })).toBeTruthy();
+    expect(within(day).getByText("1,500", { exact: true })).toBeTruthy();
     await user.click(day);
     const drawer = await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" });
     expect(within(drawer).getByRole("heading", { name: "ปรับแต่งราคาพิเศษ" })).toBeTruthy();
@@ -183,6 +185,13 @@ describe("PricingCalendar", () => {
 
     expect((leadTimeInput as HTMLInputElement).value).toBe("7");
     expect(within(drawer).getByRole("button", { name: "7 วัน (แนะนำ)" }).getAttribute("aria-pressed")).toBe("true");
+    await user.click(within(drawer).getByRole("button", { name: "รายเดือน" }));
+    await user.click(within(drawer).getByRole("button", { name: "3 เดือน" }));
+    expect((leadTimeInput as HTMLInputElement).value).toBe("3");
+    await user.click(within(drawer).getByRole("button", { name: "เพิ่มระยะเวลา" }));
+    expect((leadTimeInput as HTMLInputElement).value).toBe("4");
+    await user.click(within(drawer).getByRole("button", { name: "รายวัน" }));
+    expect((leadTimeInput as HTMLInputElement).value).toBe("120");
   });
 
   test("shows the saved normal-day status instead of the form selection in the selection card", async () => {
@@ -304,7 +313,10 @@ describe("PricingCalendar", () => {
 
     await screen.findByRole("heading", { name: "ราคาพิเศษรายวัน" });
     await user.click(screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" }));
-    expect(await screen.findByRole("dialog", { name: "ตั้งค่าราคาพิเศษ" })).toBeTruthy();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "เลือกหลายวัน" }));
+    await user.click(screen.getByRole("button", { name: "เลือกวันที่ 15 เมษายน 2569" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
     await user.click(screen.getByRole("button", { name: "เลือกวันที่ 17 เมษายน 2569" }));
     await user.click(screen.getByRole("button", { name: "วันหยุด" }));
     await user.clear(screen.getByLabelText("ราคาสุทธิ"));
@@ -533,6 +545,7 @@ describe("PricingCalendar", () => {
       expect(hotDealDay.classList.contains("pricing-day--hot-deal")).toBe(true);
     });
 
+    await user.click(screen.getByRole("button", { name: "เลือกหลายวัน" }));
     await user.click(startDay);
     await user.click(endDay);
 

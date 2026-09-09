@@ -1,5 +1,5 @@
-import { PricingCalendar } from "@/components/pricing/pricing-calendar";
+import { PropertyWorkspace } from "@/components/properties/property-workspace";
 
 export default function Home() {
-  return <PricingCalendar />;
+  return <PropertyWorkspace />;
 }

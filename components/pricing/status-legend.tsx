@@ -1,10 +1,11 @@
-import { Sparkles } from "lucide-react";
+import { Sun, Tag } from "lucide-react";
 
 const statuses = [
   { type: "normal", label: "วันปกติ", mark: "" },
-  { type: "holiday", label: "วันหยุด", mark: "" },
-  { type: "promotion", label: "ราคาพิเศษ", mark: <Sparkles aria-hidden="true" size={10} /> },
+  { type: "holiday", label: "วันหยุด", mark: <Sun aria-hidden="true" size={13} /> },
+  { type: "promotion", label: "ราคาพิเศษ", mark: <Tag aria-hidden="true" size={13} /> },
   { type: "hot-deal", label: "โปรไฟลุก", mark: "🔥" },
+  { type: "holiday-hot-deal", label: "โปรไฟลุกในวันหยุด", mark: "🔥" },
 ] as const;
 
 export function StatusLegend() {

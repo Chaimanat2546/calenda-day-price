@@ -15,11 +15,18 @@ import {
 } from "@/components/pricing/api-client";
 import { CalendarDayCell } from "@/components/pricing/calendar-day-cell";
 import { PricingEditor, type PricingMode } from "@/components/pricing/pricing-editor";
+import { PropertyPicture } from "@/components/properties/property-list";
 import { StatusLegend } from "@/components/pricing/status-legend";
 import type { CalendarDayPrice, Property, StatusType } from "@/server/types/pricing";
 
 type DateRange = { startDate: string; endDate: string };
-type PricingCalendarProps = { initialMonth?: string };
+type PricingCalendarProps = {
+  initialMonth?: string;
+  initialProperty?: Property;
+  onMonthChange?: (month: string) => void;
+  onBackToProperties?: () => void;
+  onSwitchProperty?: () => void;
+};
 
 const thaiMonthFormatter = new Intl.DateTimeFormat("th-TH", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" });
 const thaiDayFormatter = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bangkok" });
@@ -93,16 +100,18 @@ function toRange(startDate: string, endDate: string): DateRange {
   return startDate <= endDate ? { startDate, endDate } : { startDate: endDate, endDate: startDate };
 }
 
-export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendarProps) {
+export function PricingCalendar({ initialMonth = todayMonth(), initialProperty, onMonthChange, onBackToProperties, onSwitchProperty }: PricingCalendarProps) {
   const isMobileViewport = useSyncExternalStore(
     subscribeToMobileViewport,
     getMobileViewportSnapshot,
     getServerViewportSnapshot
   );
   const [month, setMonth] = useState(initialMonth);
-  const [activeProperty, setActiveProperty] = useState<Property | null>(null);
+  const [activeProperty, setActiveProperty] = useState<Property | null>(initialProperty ?? null);
   const [calendarPrices, setCalendarPrices] = useState<CalendarDayPrice[]>([]);
   const [selectedRange, setSelectedRange] = useState<DateRange | null>(null);
+  const [isMultiSelect, setIsMultiSelect] = useState(false);
+  const [rangeAnchor, setRangeAnchor] = useState<string | null>(null);
   const [mode, setMode] = useState<PricingMode>("daily-price");
   const [statusType, setStatusType] = useState<StatusType>("promotion");
   const [dailyPrice, setDailyPrice] = useState("1500");
@@ -110,8 +119,41 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   const [hotDealPrice, setHotDealPrice] = useState("1200");
   const [showBeforeDays, setShowBeforeDays] = useState("7");
   const [hotDealDescription, setHotDealDescription] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialProperty);
   const [isSaving, setIsSaving] = useState(false);
+  const [savedDrafts, setSavedDrafts] = useState({ daily: JSON.stringify(["1500", "", "promotion"]), hot: JSON.stringify(["1200", "7", ""]) });
+  const dailyDraft = JSON.stringify([dailyPrice, dailyDescription, statusType]);
+  const hotDraft = JSON.stringify([hotDealPrice, showBeforeDays, hotDealDescription]);
+  const hasUnsavedChanges = dailyDraft !== savedDrafts.daily || hotDraft !== savedDrafts.hot;
+  const [pendingNavigation, setPendingNavigation] = useState<"list" | "switch" | null>(null);
+  const navigationDialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => { onMonthChange?.(month); }, [month, onMonthChange]);
+  useEffect(() => {
+    if (!pendingNavigation) return;
+    const opener = document.activeElement;
+    navigationDialogRef.current?.showModal();
+    return () => { if (opener instanceof HTMLElement && opener.isConnected) opener.focus(); };
+  }, [pendingNavigation]);
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasUnsavedChanges]);
+  function navigate(destination: "list" | "switch") {
+    if (isSaving) return;
+    if (hasUnsavedChanges) { setPendingNavigation(destination); return; }
+    if (destination === "list") onBackToProperties?.(); else onSwitchProperty?.();
+  }
+  function discardAndNavigate() {
+    const destination = pendingNavigation;
+    setPendingNavigation(null);
+    setDailyPrice("1500"); setDailyDescription(""); setStatusType("promotion");
+    setHotDealPrice("1200"); setShowBeforeDays("7"); setHotDealDescription("");
+    setSavedDrafts({ daily: JSON.stringify(["1500", "", "promotion"]), hot: JSON.stringify(["1200", "7", ""]) });
+    setConflictsByMode({ "daily-price": [], "hot-deal": [] });
+    if (destination === "list") onBackToProperties?.(); else onSwitchProperty?.();
+  }
   const [conflictsByMode, setConflictsByMode] = useState<Record<PricingMode, string[]>>({
     "daily-price": [],
     "hot-deal": [],
@@ -133,6 +175,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     : undefined;
 
   useEffect(() => {
+    if (initialProperty) return;
     let mounted = true;
     void getProperties().then((properties) => {
       if (!mounted) return;
@@ -140,7 +183,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
       if (properties.length === 0) setMessage("ยังไม่มีบ้านพักสำหรับตั้งราคา");
     }).catch(() => mounted && setMessage("ไม่สามารถโหลดข้อมูลบ้านพักได้")).finally(() => mounted && setIsLoading(false));
     return () => { mounted = false; };
-  }, []);
+  }, [initialProperty]);
 
   async function refreshPrices(property: Property | null = activeProperty): Promise<void> {
     if (!property) return;
@@ -211,28 +254,35 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   }, [closeMobileEditor, isMobileEditorOpen]);
 
   function handleSelectDate(date: string): void {
+    if (isSaving) return;
     setMessage(null);
     setConflictsByMode({ "daily-price": [], "hot-deal": [] });
-    openMobileEditor();
-    if (!selectedRange || selectedRange.startDate !== selectedRange.endDate) {
+    if (!isMultiSelect) {
+      setSelectedRange({ startDate: date, endDate: date });
+      openMobileEditor();
+      return;
+    }
+    if (rangeAnchor === null) {
+      setRangeAnchor(date);
       setSelectedRange({ startDate: date, endDate: date });
       return;
     }
-    setSelectedRange(toRange(selectedRange.startDate, date));
+    setSelectedRange(toRange(rangeAnchor, date));
+    setRangeAnchor(null);
+    openMobileEditor();
   }
 
-  function handleOpenBulkPricing(opener?: HTMLElement | null): void {
+  function toggleMultiSelect(): void {
+    setIsMultiSelect((value) => !value);
+    setRangeAnchor(null);
     setSelectedRange(null);
     setMessage(null);
     setConflictsByMode({ "daily-price": [], "hot-deal": [] });
-    openMobileEditor(opener);
-    if (!isMobileViewport) {
-      requestAnimationFrame(() => desktopInspectorRef.current?.focus());
-    }
+    setIsMobileEditorOpen(false);
   }
 
   async function saveRange(confirmOverwrite: boolean): Promise<void> {
-    if (!activeProperty || !selectedRange) return;
+    if (!activeProperty || !selectedRange || rangeAnchor !== null) return;
     const activeMode = mode;
     const parsedPrice = Number(activeMode === "hot-deal" ? hotDealPrice : dailyPrice);
     if (!Number.isInteger(parsedPrice) || parsedPrice <= 0) {
@@ -273,6 +323,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
           confirmOverwrite,
         });
       }
+      setSavedDrafts(current => ({ ...current, [activeMode === "hot-deal" ? "hot" : "daily"]: activeMode === "hot-deal" ? hotDraft : dailyDraft }));
       setConflictsByMode((current) => ({ ...current, [activeMode]: [] }));
       await refreshPrices();
       setMessage(activeMode === "hot-deal" ? "บันทึก Hot Deal แล้ว" : "บันทึกราคาพิเศษแล้ว");
@@ -287,7 +338,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
   }
 
   async function handleDelete(): Promise<void> {
-    if (!activeProperty || !selectedRange) return;
+    if (!activeProperty || !selectedRange || rangeAnchor !== null) return;
     const activeMode = mode;
     const confirmed = window.confirm(activeMode === "hot-deal" ? "ลบ Hot Deal ในช่วงวันที่เลือกหรือไม่?" : "ลบสถานะราคาพิเศษในช่วงวันที่เลือกหรือไม่?");
     if (!confirmed) return;
@@ -329,7 +380,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     onStatusChange: setStatusType,
     propertyName: activeProperty?.name,
     selectedCalendarPrice,
-    selectedRange,
+    selectedRange: rangeAnchor === null ? selectedRange : null,
     showBeforeDays,
     statusType,
   };
@@ -338,7 +389,7 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
     <div className="pricing-app-shell">
       <aside className="app-sidebar">
         <a className="app-brand" href="#calendar"><span className="app-brand__mark">V</span><span>VillaRate Studio</span></a>
-        <nav aria-label="เมนูหลัก" className="app-nav"><a href="#calendar">▦ ภาพรวม</a><a className="app-nav__active" href="#calendar">▣ ราคาและปฏิทิน</a><a href="#calendar">⌂ บ้านพัก</a></nav>
+        <nav aria-label="เมนูหลัก" className="app-nav"><a href="#calendar">▦ ภาพรวม</a><a className="app-nav__active" href="#calendar">▣ ราคาและปฏิทิน</a><a href="#properties" onClick={event => { if (onBackToProperties) { event.preventDefault(); navigate("list"); } }}>⌂ บ้านพัก</a></nav>
         <div className="app-sidebar__footer"><span className="avatar">ภ</span><div><strong>ภู</strong><small>ผู้ดูแลระบบ</small></div></div>
       </aside>
       <div className="pricing-workspace">
@@ -350,16 +401,22 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
             <div><small>ACTIVE VILLA</small><span>{activeProperty?.name ?? (isLoading ? "กำลังโหลด…" : "ยังไม่มีบ้านพัก")}</span></div>
           </div>
         </header>
+        {initialProperty ? <div className="property-context">
+          <button className="property-back" disabled={isSaving} onClick={() => navigate("list")} type="button">← บ้านพักทั้งหมด</button>
+          <div className="property-context__identity"><PropertyPicture property={initialProperty} /><div><strong>{initialProperty.name}</strong><span>{initialProperty.location || "ยังไม่ระบุทำเล"}</span></div></div>
+          <button className="button button--secondary" disabled={isSaving} onClick={() => navigate("switch")} type="button">เปลี่ยนบ้าน</button>
+        </div> : null}
         <main className="pricing-layout" id="calendar">
           <section aria-labelledby="calendar-heading" className="calendar-card">
             <div className="calendar-card__topline">
               <div><p className="eyebrow">DAILY RATE CALENDAR</p><h2 id="calendar-heading">{thaiMonthFormatter.format(dateForDisplay(`${month}-01`))}</h2></div>
               <div className="calendar-card__controls">
-                <button className="bulk-pricing-trigger" onClick={(event) => handleOpenBulkPricing(event.currentTarget)} type="button"><span aria-hidden="true">⌘</span> Bulk Pricing</button>
+                <button aria-pressed={isMultiSelect} className="bulk-pricing-trigger" disabled={isSaving} onClick={toggleMultiSelect} type="button"><span aria-hidden="true">{isMultiSelect ? "✓" : "▦"}</span> เลือกหลายวัน</button>
                 <div className="month-controls"><button aria-label="เดือนก่อนหน้า" onClick={() => setMonth(shiftMonth(month, -1))} type="button">‹</button><button onClick={() => setMonth(todayMonth())} type="button">วันนี้</button><button aria-label="เดือนถัดไป" onClick={() => setMonth(shiftMonth(month, 1))} type="button">›</button></div>
               </div>
             </div>
             <StatusLegend />
+            <p aria-live="polite" className="calendar-card__hint">{isMultiSelect ? (rangeAnchor ? "เลือกวันสิ้นสุดของช่วงที่ต้องการ" : "เลือกวันเริ่มต้น แล้วเลือกวันสิ้นสุด") : "ราคาต่อคืน (บาท) · เลือกทีละวันเพื่อแก้ไข"} <span>{isMultiSelect ? "กดเลือกหลายวันอีกครั้งเพื่อกลับไปเลือกทีละวัน" : "กรอบกรมท่า = วันที่เลือก"}</span></p>
             <div aria-busy={isLoading} className="calendar-grid" ref={calendarGridRef} role="grid">
               {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((day) => <div className="calendar-grid__weekday" key={day} role="columnheader">{day}</div>)}
               {Array.from({ length: visibleDays[0]?.weekday ?? 0 }, (_, index) => <div aria-hidden="true" className="calendar-grid__blank" key={`blank-${index}`} />)}
@@ -379,6 +436,14 @@ export function PricingCalendar({ initialMonth = todayMonth() }: PricingCalendar
           )}
         </main>
       </div>
+      {pendingNavigation ? <dialog className="property-dialog property-dialog--confirm" ref={navigationDialogRef} onCancel={() => setPendingNavigation(null)} aria-labelledby="unsaved-title">
+        <h2 id="unsaved-title">มีข้อมูลที่ยังไม่บันทึก</h2><p>ราคาหรือเงื่อนไขของ {activeProperty?.name} ยังไม่ได้บันทึก ต้องการกลับไปบันทึกก่อนหรือทิ้งการแก้ไข?</p>
+        <div className="property-confirm-actions">
+          <button className="button button--primary" type="button" onClick={() => { setPendingNavigation(null); setMode(dailyDraft !== savedDrafts.daily ? "daily-price" : "hot-deal"); openMobileEditor(); }}>กลับไปบันทึก</button>
+          <button className="button button--secondary" type="button" onClick={discardAndNavigate}>ทิ้งการแก้ไขและไปต่อ</button>
+          <button className="button button--secondary" type="button" onClick={() => setPendingNavigation(null)}>ยกเลิก</button>
+        </div>
+      </dialog> : null}
     </div>
   );
 }
